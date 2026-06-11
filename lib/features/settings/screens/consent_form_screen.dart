@@ -120,11 +120,16 @@ class ConsentFormScreen extends ConsumerWidget {
   }
 
   void _showForm(BuildContext context, ConsentFormTemplate? form) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ConsentFormSheet(form: form),
+      builder: (_) => UncontrolledProviderScope(
+        container: ProviderScope.containerOf(context),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 580, child: _ConsentFormSheet(form: form)),
+        ),
+      ),
     );
   }
 }
@@ -366,23 +371,8 @@ Q4. また利用したいですか？
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 60),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
+    return Column(
         children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
@@ -494,7 +484,6 @@ Q4. また利用したいですか？
             ),
           ),
         ],
-      ),
     );
   }
 }

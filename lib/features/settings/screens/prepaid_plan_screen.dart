@@ -100,13 +100,15 @@ class PrepaidPlanScreen extends ConsumerWidget {
   }
 
   void _showPlanSheet(BuildContext context, WidgetRef ref, MembershipPlan? plan) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => UncontrolledProviderScope(
         container: ProviderScope.containerOf(context),
-        child: _PlanFormSheet(plan: plan),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 580, child: _PlanFormSheet(plan: plan)),
+        ),
       ),
     );
   }
@@ -445,22 +447,12 @@ class _PlanFormSheetState extends ConsumerState<_PlanFormSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
             Row(
               children: [
                 Text(
@@ -618,7 +610,6 @@ class _PlanFormSheetState extends ConsumerState<_PlanFormSheet> {
             ),
           ],
         ),
-      ),
     );
   }
 }

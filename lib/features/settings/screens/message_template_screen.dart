@@ -74,11 +74,16 @@ class MessageTemplateScreen extends ConsumerWidget {
 
   void _showEditSheet(
       BuildContext context, WidgetRef ref, MessageTemplate? tmpl) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _TemplateEditSheet(template: tmpl),
+      builder: (_) => UncontrolledProviderScope(
+        container: ProviderScope.containerOf(context),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 580, child: _TemplateEditSheet(template: tmpl)),
+        ),
+      ),
     );
   }
 }
@@ -270,22 +275,8 @@ class _TemplateEditSheetState extends ConsumerState<_TemplateEditSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.template != null;
 
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.88,
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
+    return Column(
         children: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 8),
-            width: 36, height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 12, 8),
             child: Row(
@@ -417,7 +408,6 @@ class _TemplateEditSheetState extends ConsumerState<_TemplateEditSheet> {
             ),
           ),
         ],
-      ),
     );
   }
 }

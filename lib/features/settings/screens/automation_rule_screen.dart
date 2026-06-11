@@ -123,11 +123,16 @@ class AutomationRuleScreen extends ConsumerWidget {
   }
 
   void _showForm(BuildContext context, WidgetRef ref, AutomationRule? rule) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _RuleFormSheet(rule: rule),
+      builder: (_) => UncontrolledProviderScope(
+        container: ProviderScope.containerOf(context),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 580, child: _RuleFormSheet(rule: rule)),
+        ),
+      ),
     );
   }
 }
@@ -353,25 +358,8 @@ class _RuleFormSheetState extends ConsumerState<_RuleFormSheet> {
   Widget build(BuildContext context) {
     final templatesAsync = ref.watch(_templatesForRulesProvider);
 
-    return Container(
-      margin: const EdgeInsets.only(top: 80),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
+    return Column(
         children: [
-          // ハンドル
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
@@ -453,14 +441,22 @@ class _RuleFormSheetState extends ConsumerState<_RuleFormSheet> {
                       ),
                     ],
                   ),
-                  Slider(
-                    value: _delayHours.toDouble(),
-                    min: 0,
-                    max: 168, // 7日
-                    divisions: 28,
-                    onChanged: (v) =>
-                        setState(() => _delayHours = v.round()),
-                    activeColor: AppColors.primary,
+                  TextFormField(
+                    initialValue: _delayHours > 0 ? _delayHours.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '0',
+                      suffixText: '時間',
+                      helperText: '0〜168時間（7日）',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (v) => setState(() {
+                      _delayHours = int.tryParse(v.trim()) ?? 0;
+                      if (_delayHours < 0) _delayHours = 0;
+                      if (_delayHours > 168) _delayHours = 168;
+                    }),
                   ),
                   const SizedBox(height: 20),
 
@@ -543,7 +539,6 @@ class _RuleFormSheetState extends ConsumerState<_RuleFormSheet> {
             ),
           ),
         ],
-      ),
     );
   }
 }

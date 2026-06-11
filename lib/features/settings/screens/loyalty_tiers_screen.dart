@@ -139,11 +139,16 @@ class LoyaltyTiersScreen extends ConsumerWidget {
   }
 
   void _showForm(BuildContext context, LoyaltyTier? tier) {
-    showModalBottomSheet(
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _TierFormSheet(tier: tier),
+      builder: (_) => UncontrolledProviderScope(
+        container: ProviderScope.containerOf(context),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 580, child: _TierFormSheet(tier: tier)),
+        ),
+      ),
     );
   }
 }
@@ -396,23 +401,8 @@ class _TierFormSheetState extends ConsumerState<_TierFormSheet> {
   Widget build(BuildContext context) {
     final selectedColor = _parseColor(_colorHex);
 
-    return Container(
-      margin: const EdgeInsets.only(top: 80),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: Column(
+    return Column(
         children: [
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 4),
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2)),
-            ),
-          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
@@ -565,15 +555,21 @@ class _TierFormSheetState extends ConsumerState<_TierFormSheet> {
                               color: selectedColor)),
                     ],
                   ),
-                  Slider(
-                    value: _pointMultiplier.toDouble(),
-                    min: 1,
-                    max: 10,
-                    divisions: 9,
-                    label: '×$_pointMultiplier',
-                    onChanged: (v) =>
-                        setState(() => _pointMultiplier = v.round()),
-                    activeColor: selectedColor,
+                  TextFormField(
+                    initialValue: _pointMultiplier > 0 ? _pointMultiplier.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '1',
+                      suffixText: '倍',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (v) => setState(() {
+                      _pointMultiplier = int.tryParse(v.trim()) ?? 1;
+                      if (_pointMultiplier < 1) _pointMultiplier = 1;
+                      if (_pointMultiplier > 10) _pointMultiplier = 10;
+                    }),
                   ),
                   const SizedBox(height: 16),
 
@@ -589,22 +585,27 @@ class _TierFormSheetState extends ConsumerState<_TierFormSheet> {
                               color: selectedColor)),
                     ],
                   ),
-                  Slider(
-                    value: _discountRate.toDouble(),
-                    min: 0,
-                    max: 30,
-                    divisions: 30,
-                    label: '$_discountRate%',
-                    onChanged: (v) =>
-                        setState(() => _discountRate = v.round()),
-                    activeColor: selectedColor,
+                  TextFormField(
+                    initialValue: _discountRate > 0 ? _discountRate.toString() : '',
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      hintText: '0',
+                      suffixText: '%',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    onChanged: (v) => setState(() {
+                      _discountRate = int.tryParse(v.trim()) ?? 0;
+                      if (_discountRate < 0) _discountRate = 0;
+                      if (_discountRate > 30) _discountRate = 30;
+                    }),
                   ),
                 ],
               ),
             ),
           ),
         ],
-      ),
     );
   }
 }

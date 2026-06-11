@@ -299,13 +299,15 @@ class MenuManagementScreen extends ConsumerWidget {
 
   Future<void> _showCategoryForm(BuildContext context, WidgetRef ref,
       MenuCategory? existing) async {
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => UncontrolledProviderScope(
         container: ProviderScope.containerOf(context),
-        child: _CategoryFormSheet(existing: existing),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 480, child: _CategoryFormSheet(existing: existing)),
+        ),
       ),
     );
   }
@@ -313,13 +315,15 @@ class MenuManagementScreen extends ConsumerWidget {
   // ─── 메뉴 폼 ──────────────────────────────────────────────────────────
   Future<void> _showMenuForm(BuildContext context, WidgetRef ref,
       String categoryId, MenusData? existing) async {
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => UncontrolledProviderScope(
         container: ProviderScope.containerOf(context),
-        child: _MenuFormSheet(categoryId: categoryId, existing: existing),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 480, child: _MenuFormSheet(categoryId: categoryId, existing: existing)),
+        ),
       ),
     );
   }
@@ -466,13 +470,15 @@ class _MenuList extends ConsumerWidget {
 
   Future<void> _showMenuForm(BuildContext context, WidgetRef ref,
       String catId, MenusData? existing) async {
-    await showModalBottomSheet(
+    await showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => UncontrolledProviderScope(
         container: ProviderScope.containerOf(context),
-        child: _MenuFormSheet(categoryId: catId, existing: existing),
+        child: Dialog(
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 32),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: SizedBox(width: 480, child: _MenuFormSheet(categoryId: catId, existing: existing)),
+        ),
       ),
     );
   }
@@ -684,21 +690,14 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
-    return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(isEdit ? 'カテゴリを編集' : 'カテゴリを追加',
-                style: AppTextStyles.h3),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(isEdit ? 'カテゴリを編集' : 'カテゴリを追加',
+              style: AppTextStyles.h3),
             const SizedBox(height: 16),
             TextField(
               controller: _nameCtrl,
@@ -743,8 +742,7 @@ class _CategoryFormSheetState extends ConsumerState<_CategoryFormSheet> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Future<void> _save() async {
@@ -821,22 +819,14 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
-    return Padding(
-      padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(isEdit ? 'メニューを編集' : 'メニューを追加',
-                  style: AppTextStyles.h3),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(isEdit ? 'メニューを編集' : 'メニューを追加',
+              style: AppTextStyles.h3),
               const SizedBox(height: 16),
               // 메뉴명
               TextField(
@@ -933,9 +923,7 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
                   child: Text(_saving ? '保存中...' : '保存'),
                 ),
               ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }

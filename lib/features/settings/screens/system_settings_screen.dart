@@ -97,43 +97,20 @@ class SystemSettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  // 슬라이더
-                  Row(
-                    children: [
-                      const Text('小', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-                      Expanded(
-                        child: Slider(
-                          value: settings.textScale,
-                          min: 0.80,
-                          max: 1.20,
-                          divisions: 8,
-                          activeColor: AppColors.primary,
-                          onChanged: (v) => ref
-                              .read(appSettingsProvider.notifier)
-                              .setTextScale(v),
-                        ),
-                      ),
-                      const Text('大', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  SegmentedButton<double>(
+                    segments: const [
+                      ButtonSegment(value: 0.85, label: Text('小')),
+                      ButtonSegment(value: 0.90, label: Text('90%')),
+                      ButtonSegment(value: 0.95, label: Text('95%')),
+                      ButtonSegment(value: 1.00, label: Text('標準')),
+                      ButtonSegment(value: 1.05, label: Text('105%')),
+                      ButtonSegment(value: 1.10, label: Text('110%')),
+                      ButtonSegment(value: 1.15, label: Text('大')),
                     ],
-                  ),
-                  // 단계 라벨
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: ['80%', '85%', '90%', '95%', '100%', '105%', '110%', '115%', '120%']
-                          .map((s) => Text(s,
-                              style: TextStyle(
-                                fontSize: 9,
-                                color: _scaleLabel(s, settings.textScale)
-                                    ? AppColors.primary
-                                    : AppColors.textDisabled,
-                                fontWeight: _scaleLabel(s, settings.textScale)
-                                    ? FontWeight.w700
-                                    : FontWeight.w400,
-                              )))
-                          .toList(),
-                    ),
+                    selected: {_nearestScale(settings.textScale)},
+                    onSelectionChanged: (s) => ref
+                        .read(appSettingsProvider.notifier)
+                        .setTextScale(s.first),
                   ),
                   const SizedBox(height: 8),
                   // 현재 값 표시 + 리셋 버튼
@@ -180,9 +157,9 @@ class SystemSettingsScreen extends ConsumerWidget {
     );
   }
 
-  bool _scaleLabel(String label, double current) {
-    final val = double.parse(label.replaceAll('%', '')) / 100;
-    return (val - current).abs() < 0.001;
+  double _nearestScale(double current) {
+    const steps = [0.85, 0.90, 0.95, 1.00, 1.05, 1.10, 1.15];
+    return steps.reduce((a, b) => (a - current).abs() < (b - current).abs() ? a : b);
   }
 }
 
