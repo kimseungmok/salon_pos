@@ -54,27 +54,26 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      top: 0,
+      top: 8,
       left: 0,
       right: 0,
       child: FadeTransition(
         opacity: _fade,
-        child: SafeArea(
-            child: Center(
+        child: Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
+                  constraints: const BoxConstraints(maxWidth: 480),
                   child: Material(
                     elevation: 8,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     shadowColor: Colors.black26,
                     child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                       onTap: _dismiss,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 13),
+                            horizontal: 14, vertical: 8),
                         decoration: BoxDecoration(
                           color: widget.color,
                           borderRadius: BorderRadius.circular(12),
@@ -89,7 +88,7 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
                                 widget.message,
                                 style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 14,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -129,7 +128,6 @@ class _TopBannerWidgetState extends State<_TopBannerWidget>
                 ),
               ),
             ),
-          ),
         ),
     );
   }
