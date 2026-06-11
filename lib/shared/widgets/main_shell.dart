@@ -94,7 +94,10 @@ class _MainShellState extends ConsumerState<MainShell> {
     final tab = _tabs[idx];
     final topPad = MediaQuery.of(context).padding.top;
 
-    final canPop = context.canPop();
+    // context.canPop()은 ShellRoute 컨텍스트에서 올바르게 동작하지 않으므로
+    // 경로 세그먼트 수로 판단 (예: /settings/campaign → 2개 = 뒤로가기 가능)
+    final segments = location.split('/').where((s) => s.isNotEmpty).toList();
+    final canPop = segments.length > 1;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -129,7 +132,13 @@ class _MainShellState extends ConsumerState<MainShell> {
             timeStr: _timeStr(),
             notifCount: notifCount,
             onHamburger: () => _scaffoldKey.currentState?.openDrawer(),
-            onBack: canPop ? () => context.pop() : null,
+            onBack: canPop
+                ? () {
+                    final parent =
+                        '/${segments.sublist(0, segments.length - 1).join('/')}';
+                    context.go(parent);
+                  }
+                : null,
           ),
           // 화면 본체
           Expanded(child: widget.child),
