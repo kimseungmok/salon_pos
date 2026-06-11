@@ -65,6 +65,18 @@ class SettingsScreen extends StatelessWidget {
             subtitle: 'パーマ・カラー等の施術同意書・カウンセリングシート管理',
             onTap: () => context.push(AppRoutes.settingsConsent),
           ),
+          _SettingsTile(
+            icon: Icons.card_membership_outlined,
+            title: '回数券・プリペイドプラン',
+            subtitle: '回数券・プリペイド券のプラン作成・管理',
+            onTap: () => context.push(AppRoutes.settingsPrepaid),
+          ),
+          _SettingsTile(
+            icon: Icons.receipt_long_outlined,
+            title: '掛け売り管理',
+            subtitle: '未収金の確認・収納管理',
+            onTap: () => context.push(AppRoutes.settingsCreditMgmt),
+          ),
           const Divider(),
           _SectionHeader(label: 'スタッフ管理'),
           _SettingsTile(

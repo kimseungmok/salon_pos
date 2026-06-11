@@ -159,6 +159,7 @@ class SalePayments extends Table {
   IntColumn get amount => integer()();
   TextColumn get giftCardId => text().nullable()();
   TextColumn get membershipId => text().nullable()();
+  TextColumn get creditAccountId => text().nullable()(); // 掛け売り
   TextColumn get cardBrand => text().nullable()(); // visa|mastercard|jcb|amex
   TextColumn get cardLast4 => text().nullable()();
   TextColumn get approvalNo => text().nullable()(); // 승인번호

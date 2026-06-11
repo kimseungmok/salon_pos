@@ -162,7 +162,7 @@ class _CustomerDetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return DefaultTabController(
-      length: 5,
+      length: 7,
       initialIndex: initialTab,
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -197,6 +197,8 @@ class _CustomerDetailBody extends ConsumerWidget {
               Tab(text: '来店履歴'),
               Tab(text: '予約履歴'),
               Tab(text: 'ポイント'),
+              Tab(text: '回数券'),
+              Tab(text: '掛け売り'),
             ],
           ),
         ),
@@ -207,6 +209,8 @@ class _CustomerDetailBody extends ConsumerWidget {
             _VisitHistoryTab(customerId: customer.id),
             _AppointmentsTab(customerId: customer.id),
             _PointHistoryTab(customerId: customer.id, pointBalance: customer.pointBalance),
+            _MembershipTab(customerId: customer.id),
+            _CreditTab(customerId: customer.id, customerName: customer.name),
           ],
         ),
       ),
@@ -1467,7 +1471,9 @@ class _EditCustomerSheetState extends ConsumerState<_EditCustomerSheet> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -2221,7 +2227,9 @@ class _MessageTemplateSheet extends ConsumerWidget {
     final async = ref.watch(_messageTemplatesProvider);
 
     return Container(
-      height: MediaQuery.of(context).size.height * 0.7,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -3086,4 +3094,558 @@ String _fmt(int n) {
     buf.write(s[i]);
   }
   return buf.toString();
+}
+
+// ─── 回数券・プリペイド タブ ──────────────────────────────────────────────
+
+final _customerMembershipsProvider =
+    StreamProvider.family<List<CustomerMembership>, String>((ref, customerId) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.customerMemberships)
+        ..where((t) => t.customerId.equals(customerId))
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)]))
+      .watch();
+});
+
+final _membershipPlanByIdProvider =
+    FutureProvider.family<MembershipPlan?, String>((ref, planId) async {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.membershipPlans)..where((t) => t.id.equals(planId)))
+      .getSingleOrNull();
+});
+
+class _MembershipTab extends ConsumerWidget {
+  const _MembershipTab({required this.customerId});
+  final String customerId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final membershipsAsync = ref.watch(_customerMembershipsProvider(customerId));
+
+    return membershipsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (memberships) {
+        if (memberships.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.card_membership_outlined,
+                    size: 64,
+                    color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                const SizedBox(height: 16),
+                const Text('回数券・プリペイドなし',
+                    style: TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                const Text('会計画面で回数券・プリペイドを販売すると\nここに表示されます',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
+          );
+        }
+
+        final active = memberships
+            .where((m) => m.status == 'active')
+            .toList();
+        final inactive = memberships
+            .where((m) => m.status != 'active')
+            .toList();
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (active.isNotEmpty) ...[
+              _MembershipSectionLabel(label: '有効', count: active.length),
+              const SizedBox(height: 8),
+              ...active.map((m) => _MembershipCard(membership: m)),
+              const SizedBox(height: 16),
+            ],
+            if (inactive.isNotEmpty) ...[
+              _MembershipSectionLabel(label: '終了・キャンセル', count: inactive.length),
+              const SizedBox(height: 8),
+              ...inactive.map((m) => _MembershipCard(membership: m, dimmed: true)),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MembershipSectionLabel extends StatelessWidget {
+  const _MembershipSectionLabel({required this.label, required this.count});
+  final String label;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary)),
+        const SizedBox(width: 6),
+        Text('($count)',
+            style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+      ],
+    );
+  }
+}
+
+class _MembershipCard extends ConsumerWidget {
+  const _MembershipCard({required this.membership, this.dimmed = false});
+  final CustomerMembership membership;
+  final bool dimmed;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final planAsync = ref.watch(_membershipPlanByIdProvider(membership.planId));
+
+    return Opacity(
+      opacity: dimmed ? 0.55 : 1.0,
+      child: Card(
+        elevation: 0,
+        margin: const EdgeInsets.only(bottom: 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: AppColors.primary.withValues(alpha: 0.2)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: planAsync.when(
+                      data: (plan) => Text(
+                        plan?.name ?? membership.planId,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                      ),
+                      loading: () => const Text('...'),
+                      error: (_, __) => Text(membership.planId),
+                    ),
+                  ),
+                  _StatusBadge(status: membership.status),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  if (membership.totalSessions != null) ...[
+                    _InfoChip(
+                      label: '残り',
+                      value:
+                          '${(membership.totalSessions! - membership.usedSessions)}/${membership.totalSessions}回',
+                      color: const Color(0xFF6366F1),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (membership.remainingAmount != null) ...[
+                    _InfoChip(
+                      label: '残高',
+                      value: '¥${_fmt(membership.remainingAmount!)}',
+                      color: const Color(0xFF0EA5E9),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (membership.endDate != null)
+                    _InfoChip(
+                      label: '有効期限',
+                      value: membership.endDate!.length >= 10
+                          ? membership.endDate!.substring(0, 10)
+                          : membership.endDate!,
+                      color: AppColors.textSecondary,
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  const _StatusBadge({required this.status});
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    const labels = {
+      'active': '有効',
+      'expired': '期限切れ',
+      'suspended': '停止',
+      'cancelled': 'キャンセル',
+    };
+    const colors = {
+      'active': AppColors.success,
+      'expired': AppColors.textSecondary,
+      'suspended': Colors.orange,
+      'cancelled': AppColors.error,
+    };
+    final label = labels[status] ?? status;
+    final color = colors[status] ?? AppColors.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(label,
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip(
+      {required this.label, required this.value, required this.color});
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('$label: ',
+              style: TextStyle(fontSize: 11, color: color.withValues(alpha: 0.7))),
+          Text(value,
+              style: TextStyle(
+                  fontSize: 12, fontWeight: FontWeight.w700, color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 掛け売り タブ ────────────────────────────────────────────────────────────
+
+final _customerCreditAccountProvider =
+    StreamProvider.family<CreditAccount?, String>((ref, customerId) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.creditAccounts)
+        ..where((t) => t.customerId.equals(customerId)))
+      .watchSingleOrNull();
+});
+
+final _customerCreditTxProvider =
+    StreamProvider.family<List<CreditTransaction>, String>((ref, customerId) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.creditTransactions)
+        ..where((t) => t.customerId.equals(customerId))
+        ..orderBy([(t) => OrderingTerm.desc(t.createdAt)])
+        ..limit(50))
+      .watch();
+});
+
+class _CreditTab extends ConsumerStatefulWidget {
+  const _CreditTab({required this.customerId, required this.customerName});
+  final String customerId;
+  final String customerName;
+
+  @override
+  ConsumerState<_CreditTab> createState() => _CreditTabState();
+}
+
+class _CreditTabState extends ConsumerState<_CreditTab> {
+  final _amountCtrl = TextEditingController();
+  final _noteCtrl = TextEditingController();
+  bool _processing = false;
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _recordPayment(CreditAccount account) async {
+    final amount = int.tryParse(_amountCtrl.text.trim());
+    if (amount == null || amount <= 0) {
+      showTopBanner(context, '収納金額を入力してください',
+          icon: Icons.warning_rounded, color: AppColors.error);
+      return;
+    }
+
+    setState(() => _processing = true);
+    try {
+      final db = ref.read(databaseProvider);
+      final newBalance = (account.balance - amount).clamp(0, account.balance);
+
+      await db.transaction(() async {
+        await db.into(db.creditTransactions).insert(
+              CreditTransactionsCompanion(
+                id: Value(const Uuid().v4()),
+                accountId: Value(account.id),
+                customerId: Value(account.customerId),
+                txType: const Value('payment'),
+                amount: Value(-amount),
+                balanceAfter: Value(newBalance),
+                notes: Value(_noteCtrl.text.trim().isEmpty
+                    ? null
+                    : _noteCtrl.text.trim()),
+              ),
+            );
+        await (db.update(db.creditAccounts)
+              ..where((t) => t.id.equals(account.id)))
+            .write(CreditAccountsCompanion(balance: Value(newBalance)));
+      });
+
+      if (mounted) {
+        _amountCtrl.clear();
+        _noteCtrl.clear();
+        showTopBanner(context, '¥${_fmt(amount)} を収納しました',
+            icon: Icons.check_circle_outline, color: AppColors.success);
+      }
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accountAsync =
+        ref.watch(_customerCreditAccountProvider(widget.customerId));
+    final txAsync =
+        ref.watch(_customerCreditTxProvider(widget.customerId));
+
+    return accountAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (account) {
+        if (account == null) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.receipt_long_outlined,
+                    size: 64,
+                    color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                const SizedBox(height: 16),
+                const Text('掛け売り履歴なし',
+                    style: TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 8),
+                const Text('会計画面で「掛け売り」決済を選択すると\nここに表示されます',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary)),
+              ],
+            ),
+          );
+        }
+
+        return Column(
+          children: [
+            // 잔액 헤더
+            Container(
+              color: AppColors.surface,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Row(
+                children: [
+                  const Icon(Icons.receipt_long_outlined,
+                      color: AppColors.error, size: 20),
+                  const SizedBox(width: 10),
+                  const Text('未収残高', style: TextStyle(fontSize: 14)),
+                  const Spacer(),
+                  Text(
+                    '¥${_fmt(account.balance)}',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
+                      color: account.balance > 0
+                          ? AppColors.error
+                          : AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // 수납 폼
+            if (account.balance > 0)
+              Container(
+                padding: const EdgeInsets.all(12),
+                color: AppColors.error.withValues(alpha: 0.04),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _amountCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: '収納金額 (¥)',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _noteCtrl,
+                        decoration: const InputDecoration(
+                          labelText: 'メモ（任意）',
+                          border: OutlineInputBorder(),
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed:
+                          _processing ? null : () => _recordPayment(account),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                      ),
+                      child: _processing
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white))
+                          : const Text('収納'),
+                    ),
+                  ],
+                ),
+              ),
+            const Divider(height: 1),
+
+            // 이력
+            Expanded(
+              child: txAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('$e')),
+                data: (txList) {
+                  if (txList.isEmpty) {
+                    return const Center(
+                        child: Text('取引履歴がありません',
+                            style: TextStyle(color: AppColors.textSecondary)));
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: txList.length,
+                    separatorBuilder: (_, __) =>
+                        const Divider(height: 1, indent: 52),
+                    itemBuilder: (ctx, i) => _CreditTxTile(tx: txList[i]),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CreditTxTile extends StatelessWidget {
+  const _CreditTxTile({required this.tx});
+  final CreditTransaction tx;
+
+  @override
+  Widget build(BuildContext context) {
+    final isCharge = tx.txType == 'charge';
+    final isPayment = tx.txType == 'payment';
+    final color = isCharge
+        ? AppColors.error
+        : isPayment
+            ? AppColors.success
+            : AppColors.warning;
+    final label =
+        isCharge ? '掛け売り' : isPayment ? '収納' : '調整';
+    final dateStr = tx.createdAt.length >= 16
+        ? tx.createdAt.substring(5, 16)
+        : tx.createdAt;
+
+    return ListTile(
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: color.withAlpha(20),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          isCharge
+              ? Icons.arrow_upward_rounded
+              : isPayment
+                  ? Icons.arrow_downward_rounded
+                  : Icons.tune,
+          size: 16,
+          color: color,
+        ),
+      ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+            decoration: BoxDecoration(
+              color: color.withAlpha(20),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600)),
+          ),
+          const SizedBox(width: 8),
+          if (tx.notes != null && tx.notes!.isNotEmpty)
+            Expanded(
+              child: Text(tx.notes!,
+                  style: const TextStyle(
+                      fontSize: 12, color: AppColors.textSecondary),
+                  overflow: TextOverflow.ellipsis),
+            ),
+        ],
+      ),
+      subtitle: Text(dateStr,
+          style:
+              const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+      trailing: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            '${tx.amount > 0 ? '+' : ''}¥${_fmt(tx.amount.abs())}',
+            style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: color),
+          ),
+          Text(
+            '残 ¥${_fmt(tx.balanceAfter)}',
+            style: const TextStyle(
+                fontSize: 10, color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
 }

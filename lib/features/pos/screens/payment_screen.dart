@@ -29,6 +29,7 @@ const _allMethods = [
   _PayMethod('qr', 'QRコード', Icons.qr_code_scanner, Color(0xFFFF6B35)),
   _PayMethod('gift_card', 'ギフトカード', Icons.card_giftcard_outlined, Color(0xFF9B5CDB)),
   _PayMethod('bank_transfer', '銀行振込', Icons.account_balance_outlined, Color(0xFF8D6E63)),
+  _PayMethod('credit', '掛け売り', Icons.receipt_long_outlined, Color(0xFFEF4444)),
 ];
 
 // ─── 결제 화면 ────────────────────────────────────────────────────────────
@@ -2327,7 +2328,7 @@ class _MethodSelectGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2340,17 +2341,16 @@ class _MethodSelectGrid extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Expanded(
-            child: GridView.count(
-              crossAxisCount: 3,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.5,
-              physics: const NeverScrollableScrollPhysics(),
-              children: _allMethods.map((m) {
-                return _MethodButton(method: m, onTap: () => onSelect(m.key));
-              }).toList(),
-            ),
+          GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 3,
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.5,
+            physics: const NeverScrollableScrollPhysics(),
+            children: _allMethods.map((m) {
+              return _MethodButton(method: m, onTap: () => onSelect(m.key));
+            }).toList(),
           ),
         ],
       ),
@@ -3519,6 +3519,8 @@ class _ReceiptDialog extends ConsumerWidget {
       'qr': 'QR決済',
       'gift_card': 'ギフトカード',
       'point': 'ポイント',
+      'credit': '掛け売り',
+      'bank_transfer': '銀行振込',
     };
     return m[key] ?? key;
   }

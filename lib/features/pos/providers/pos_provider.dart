@@ -497,7 +497,47 @@ class PosNotifier extends Notifier<PosState> {
           approvalNo: Value(p['approvalNo'] as String?),
           giftCardId: Value(p['giftCardId'] as String?),
           membershipId: Value(p['membershipId'] as String?),
+          creditAccountId: Value(p['creditAccountId'] as String?),
         ));
+
+        // 掛け売り 결제 — credit_accounts 잔액 증가 & 이력 기록
+        if (p['method'] == 'credit' && s.customerId != null) {
+          final chargeAmount = p['amount'] as int;
+          final existingAccount = await (_db.select(_db.creditAccounts)
+                ..where((t) => t.customerId.equals(s.customerId!)))
+              .getSingleOrNull();
+
+          final String accountId;
+          final int newBalance;
+          if (existingAccount != null) {
+            accountId = existingAccount.id;
+            newBalance = existingAccount.balance + chargeAmount;
+            await (_db.update(_db.creditAccounts)
+                  ..where((t) => t.id.equals(accountId)))
+                .write(CreditAccountsCompanion(balance: Value(newBalance)));
+          } else {
+            accountId = _uuid.v4();
+            newBalance = chargeAmount;
+            await _db.into(_db.creditAccounts).insert(CreditAccountsCompanion.insert(
+              id: accountId,
+              customerId: s.customerId!,
+              balance: Value(chargeAmount),
+            ));
+          }
+
+          await _db.into(_db.creditTransactions).insert(
+                CreditTransactionsCompanion.insert(
+                  id: _uuid.v4(),
+                  accountId: accountId,
+                  customerId: s.customerId!,
+                  txType: 'charge',
+                  amount: chargeAmount,
+                  balanceAfter: newBalance,
+                  saleId: Value(saleId),
+                  staffId: Value(staffId),
+                ),
+              );
+        }
       }
 
       // 4. 포인트 적립/사용

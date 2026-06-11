@@ -102,13 +102,16 @@ part 'app_database.g.dart';
   CustomerConsentForms,
   BlockedTimeTypes,
   BlockedTimes,
+  // Credit (掛け売り)
+  CreditAccounts,
+  CreditTransactions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -149,6 +152,15 @@ class AppDatabase extends _$AppDatabase {
             // v2 → v3: menus テーブルにPOSグリッド位置・お気に入りカラム追加
             await m.addColumn(menus, menus.posSlot);
             await m.addColumn(menus, menus.isFavorite);
+          }
+          if (from < 4) {
+            // v3 → v4: 외상(掛け売り) 테이블 추가
+            await m.createTable(creditAccounts);
+            await m.createTable(creditTransactions);
+          }
+          if (from < 5) {
+            // v4 → v5: sale_payments에 credit_account_id 추가
+            await m.addColumn(salePayments, salePayments.creditAccountId);
           }
         },
         beforeOpen: (details) async {

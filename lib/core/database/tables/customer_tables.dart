@@ -187,3 +187,35 @@ class GiftCardTransactions extends Table {
   @override
   Set<Column> get primaryKey => {id};
 }
+
+// ─── 외상 계정 (掛け売り) ─────────────────────────────────────────────────
+class CreditAccounts extends Table {
+  TextColumn get id => text()();
+  TextColumn get customerId => text()();
+  IntColumn get balance => integer().withDefault(const Constant(0))(); // 미수금 (양수 = 고객이 갚아야 할 금액)
+  IntColumn get creditLimit => integer().withDefault(const Constant(0))(); // 한도 (0=무제한)
+  TextColumn get status => text().withDefault(const Constant('active'))(); // active|suspended
+  TextColumn get notes => text().nullable()();
+  TextColumn get updatedAt => text().withDefault(const CustomExpression("(datetime('now','localtime'))"))();
+  TextColumn get createdAt => text().withDefault(const CustomExpression("(datetime('now','localtime'))"))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+// ─── 외상 거래 이력 ───────────────────────────────────────────────────────
+class CreditTransactions extends Table {
+  TextColumn get id => text()();
+  TextColumn get accountId => text()(); // → credit_accounts.id
+  TextColumn get customerId => text()();
+  TextColumn get txType => text()(); // charge(외상발생)|payment(수납)|adjust(수동조정)
+  IntColumn get amount => integer()(); // 양수 = 외상증가, 음수 = 수납/감소
+  IntColumn get balanceAfter => integer()();
+  TextColumn get saleId => text().nullable()(); // 연결 매출
+  TextColumn get staffId => text().nullable()();
+  TextColumn get notes => text().nullable()();
+  TextColumn get createdAt => text().withDefault(const CustomExpression("(datetime('now','localtime'))"))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
