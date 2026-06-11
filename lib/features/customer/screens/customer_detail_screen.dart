@@ -80,24 +80,36 @@ final customerTopMenusProvider =
   return sorted.take(3).toList();
 });
 
-// 最近6ヶ月の月別来店回数 (チャート用)
+// 最近6ヶ月の月別来店回数 (チャート用) — 単一クエリで集計
 final customerMonthlyVisitsProvider =
     FutureProvider.family<List<int>, String>((ref, customerId) async {
   final db = ref.watch(databaseProvider);
   final now = DateTime.now();
-  // 6ヶ月分のラベルと来店数を計算
+  final sixMonthsAgo = DateTime(now.year, now.month - 5, 1);
+  final startDate =
+      '${sixMonthsAgo.year.toString().padLeft(4, '0')}-${sixMonthsAgo.month.toString().padLeft(2, '0')}-01';
+  final sales = await (db.select(db.sales)
+        ..where((t) =>
+            t.customerId.equals(customerId) &
+            t.saleDate.isBiggerOrEqualValue(startDate) &
+            t.status.equals('completed')))
+      .get();
   final counts = List.filled(6, 0);
-  for (int i = 0; i < 6; i++) {
-    final month = DateTime(now.year, now.month - (5 - i));
-    final prefix = '${month.year.toString().padLeft(4, '0')}-'
-        '${month.month.toString().padLeft(2, '0')}-';
-    final sales = await (db.select(db.sales)
-          ..where((t) =>
-              t.customerId.equals(customerId) &
-              t.saleDate.like('$prefix%') &
-              t.status.equals('completed')))
-        .get();
-    counts[i] = sales.length;
+  for (final sale in sales) {
+    if (sale.saleDate.length >= 7) {
+      final parts = sale.saleDate.substring(0, 7).split('-');
+      if (parts.length == 2) {
+        final y = int.tryParse(parts[0]) ?? 0;
+        final m = int.tryParse(parts[1]) ?? 0;
+        for (int i = 0; i < 6; i++) {
+          final month = DateTime(now.year, now.month - (5 - i));
+          if (month.year == y && month.month == m) {
+            counts[i]++;
+            break;
+          }
+        }
+      }
+    }
   }
   return counts;
 });
