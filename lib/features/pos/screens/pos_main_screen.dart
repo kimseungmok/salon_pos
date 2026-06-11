@@ -1109,7 +1109,7 @@ class _MenuGrid extends ConsumerWidget {
 
 // ─── 페이지네이션 그리드 뷰 ──────────────────────────────────────────────
 const int _kCols = 5;
-const int _kRows = 2;
+const int _kRows = 4;
 const int _kPerPage = _kCols * _kRows;
 const double _kCardW = 152.0;
 const double _kCardH = 90.0;
@@ -1230,12 +1230,37 @@ class _EditModeGridState extends ConsumerState<_EditModeGrid> {
   int? _draggingMenuSlot;
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
+  late int _editPageCount;
 
   @override
   void initState() {
     super.initState();
     _slotMap = _buildSlotMap(widget.menus);
     _originalSlotMap = Map.from(_slotMap);
+    _editPageCount = _calcMinPageCount();
+  }
+
+  int _calcMinPageCount() {
+    if (_slotMap.isEmpty) return 1;
+    final maxSlot = _slotMap.values.reduce((a, b) => a > b ? a : b);
+    return (maxSlot / _kPerPage).floor() + 1;
+  }
+
+  void _addPage() => setState(() => _editPageCount++);
+
+  void _removePage(int page) {
+    // 해당 페이지에 아이템이 있으면 삭제 불가
+    final pageStart = page * _kPerPage;
+    final pageEnd = pageStart + _kPerPage;
+    final hasItems = _slotMap.values.any((s) => s >= pageStart && s < pageEnd);
+    if (hasItems) return;
+    setState(() {
+      _editPageCount--;
+      if (_currentPage >= _editPageCount) {
+        _currentPage = _editPageCount - 1;
+        _pageCtrl.jumpToPage(_currentPage);
+      }
+    });
   }
 
   Future<void> revertAll() async {
@@ -1408,53 +1433,157 @@ class _EditModeGridState extends ConsumerState<_EditModeGrid> {
       );
     }
 
-    // 편집 모드
+    // 편집 모드 — PageView
     return Container(
       color: AppColors.background,
       child: LayoutBuilder(builder: (context, constraints) {
         final cardW = (constraints.maxWidth - 20 - (_kCols - 1) * _kSpacing) / _kCols;
-        final visibleRows = ((constraints.maxHeight - 20) / (_kCardH + _kSpacing)).floor().clamp(2, 99);
-        final editRows = rows < visibleRows ? visibleRows : rows;
-        return SingleChildScrollView(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          children: List.generate(editRows, (row) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: _kSpacing),
-              child: Row(
-                children: List.generate(_kCols, (col) {
-                  final slot = row * _kCols + col;
-                  final menu = _menuAtSlot(slot);
+        return Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageCtrl,
+                onPageChanged: (p) => setState(() => _currentPage = p),
+                itemCount: _editPageCount,
+                itemBuilder: (_, page) {
+                  final pageStart = page * _kPerPage;
                   return Padding(
-                    padding: EdgeInsets.only(right: col < _kCols - 1 ? _kSpacing : 0),
-                    child: SizedBox(
-                      width: cardW,
-                      height: _kCardH,
-                      child: menu != null
-                          ? _EditCard(
-                              key: ValueKey(menu.id),
-                              menu: menu,
-                              slot: slot,
-                              onMoveToSlot: _moveToSlot,
-                              onDragStart: () => setState(() => _draggingMenuSlot = slot),
-                              onDragEnd: () => setState(() => _draggingMenuSlot = null),
-                              onToggleVisibility: () => _toggleVisibility(menu),
-                              onToggleFavorite: () => _toggleFavorite(menu),
-                            )
-                          : _EmptySlot(
-                              slot: slot,
-                              isDragOver: false,
-                              onAccept: (menuId) => _moveToSlot(menuId, slot),
-                            ),
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: List.generate(_kRows, (ri) {
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: ri < _kRows - 1 ? _kSpacing : 0),
+                          child: Row(
+                            children: List.generate(_kCols, (col) {
+                              final slot = pageStart + ri * _kCols + col;
+                              final menu = _menuAtSlot(slot);
+                              return Padding(
+                                padding: EdgeInsets.only(right: col < _kCols - 1 ? _kSpacing : 0),
+                                child: SizedBox(
+                                  width: cardW,
+                                  height: _kCardH,
+                                  child: menu != null
+                                      ? _EditCard(
+                                          key: ValueKey(menu.id),
+                                          menu: menu,
+                                          slot: slot,
+                                          onMoveToSlot: _moveToSlot,
+                                          onDragStart: () => setState(() => _draggingMenuSlot = slot),
+                                          onDragEnd: () => setState(() => _draggingMenuSlot = null),
+                                          onToggleVisibility: () => _toggleVisibility(menu),
+                                          onToggleFavorite: () => _toggleFavorite(menu),
+                                        )
+                                      : _EmptySlot(
+                                          slot: slot,
+                                          isDragOver: false,
+                                          onAccept: (menuId) => _moveToSlot(menuId, slot),
+                                        ),
+                                ),
+                              );
+                            }),
+                          ),
+                        );
+                      }),
                     ),
                   );
-                }),
+                },
               ),
-            );
-          }),
-        ),
+            ),
+            _EditPageNav(
+              current: _currentPage,
+              total: _editPageCount,
+              onPrev: _currentPage > 0
+                  ? () => _pageCtrl.previousPage(duration: const Duration(milliseconds: 220), curve: Curves.easeInOut)
+                  : null,
+              onNext: _currentPage < _editPageCount - 1
+                  ? () => _pageCtrl.nextPage(duration: const Duration(milliseconds: 220), curve: Curves.easeInOut)
+                  : null,
+              onAddPage: _addPage,
+              onRemovePage: () => _removePage(_currentPage),
+              canRemove: _editPageCount > 1 && !_slotMap.values.any(
+                (s) => s >= _currentPage * _kPerPage && s < (_currentPage + 1) * _kPerPage,
+              ),
+            ),
+          ],
         );
       }),
+    );
+  }
+}
+
+// ─── 편집모드 페이지 네비게이터 ───────────────────────────────────────────────
+class _EditPageNav extends StatelessWidget {
+  const _EditPageNav({
+    required this.current,
+    required this.total,
+    required this.onPrev,
+    required this.onNext,
+    required this.onAddPage,
+    required this.onRemovePage,
+    required this.canRemove,
+  });
+  final int current;
+  final int total;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+  final VoidCallback onAddPage;
+  final VoidCallback onRemovePage;
+  final bool canRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: Row(
+        children: [
+          // 페이지 삭제
+          GestureDetector(
+            onTap: canRemove ? onRemovePage : null,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(
+                Icons.remove_circle_outline_rounded,
+                size: 18,
+                color: canRemove ? AppColors.error : AppColors.textDisabled,
+              ),
+            ),
+          ),
+          // 페이지 네비게이터
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: onPrev,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Icon(Icons.chevron_left_rounded,
+                        size: 20, color: onPrev != null ? AppColors.textPrimary : AppColors.textDisabled),
+                  ),
+                ),
+                Text('${current + 1} / $total',
+                    style: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600)),
+                GestureDetector(
+                  onTap: onNext,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Icon(Icons.chevron_right_rounded,
+                        size: 20, color: onNext != null ? AppColors.textPrimary : AppColors.textDisabled),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 페이지 추가
+          GestureDetector(
+            onTap: onAddPage,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Icon(Icons.add_circle_outline_rounded, size: 18, color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
