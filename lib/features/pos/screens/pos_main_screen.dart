@@ -1125,9 +1125,13 @@ class _MenuGridView extends ConsumerStatefulWidget {
   ConsumerState<_MenuGridView> createState() => _MenuGridViewState();
 }
 
-class _MenuGridViewState extends ConsumerState<_MenuGridView> {
+class _MenuGridViewState extends ConsumerState<_MenuGridView>
+    with AutomaticKeepAliveClientMixin {
   final PageController _pageCtrl = PageController();
   int _currentPage = 0;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
@@ -1146,6 +1150,7 @@ class _MenuGridViewState extends ConsumerState<_MenuGridView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final menus = widget.menus;
     if (menus.isEmpty) {
       return Center(child: Text('メニューがありません', style: AppTextStyles.caption));
@@ -1285,8 +1290,7 @@ class _EditModeGridState extends ConsumerState<_EditModeGrid> {
   int get _totalSlots {
     if (_slotMap.isEmpty) return _kCols;
     final maxSlot = _slotMap.values.reduce((a, b) => a > b ? a : b);
-    // 최소 2행, 마지막 행 다음 빈 행 1개 추가
-    final rows = (maxSlot / _kCols).floor() + 2;
+    final rows = (maxSlot / _kCols).floor() + 1;
     return rows * _kCols;
   }
 
@@ -1409,10 +1413,12 @@ class _EditModeGridState extends ConsumerState<_EditModeGrid> {
       color: AppColors.background,
       child: LayoutBuilder(builder: (context, constraints) {
         final cardW = (constraints.maxWidth - 20 - (_kCols - 1) * _kSpacing) / _kCols;
+        final visibleRows = ((constraints.maxHeight - 20) / (_kCardH + _kSpacing)).floor().clamp(2, 99);
+        final editRows = rows < visibleRows ? visibleRows : rows;
         return SingleChildScrollView(
         padding: const EdgeInsets.all(10),
         child: Column(
-          children: List.generate(rows, (row) {
+          children: List.generate(editRows, (row) {
             return Padding(
               padding: const EdgeInsets.only(bottom: _kSpacing),
               child: Row(
