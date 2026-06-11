@@ -27,7 +27,8 @@ class SystemSettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('システム設定')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,title: const Text('システム設定')),
       body: settingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),

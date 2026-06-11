@@ -26,6 +26,7 @@ class MessageTemplateScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('メッセージテンプレート'),
         actions: [
           IconButton(

@@ -71,6 +71,7 @@ class _TransactionsScreenState extends ConsumerState<TransactionsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,

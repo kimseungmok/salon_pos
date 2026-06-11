@@ -74,6 +74,7 @@ class MenuManagementScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('メニュー管理'),
         actions: [
           TextButton.icon(

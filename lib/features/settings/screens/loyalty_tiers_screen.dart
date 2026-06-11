@@ -26,6 +26,7 @@ class LoyaltyTiersScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('会員ランク管理'),
         actions: [
           IconButton(

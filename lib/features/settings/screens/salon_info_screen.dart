@@ -24,7 +24,8 @@ class SalonInfoScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('サロン基本情報')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,title: const Text('サロン基本情報')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),

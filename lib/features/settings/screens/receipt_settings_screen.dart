@@ -58,6 +58,7 @@ class _ReceiptSettingsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('レシート設定'),
         actions: [
           if (_dirty)

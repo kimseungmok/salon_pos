@@ -29,6 +29,7 @@ class PrepaidPlanScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('回数券・プリペイドプラン'),
         backgroundColor: AppColors.surface,
         elevation: 0,

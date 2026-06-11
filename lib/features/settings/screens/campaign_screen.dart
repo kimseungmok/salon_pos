@@ -36,6 +36,7 @@ class CampaignScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('キャンペーン管理'),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,

@@ -59,6 +59,7 @@ class CreditManagementScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('掛け売り管理'),
         backgroundColor: AppColors.surface,
         elevation: 0,

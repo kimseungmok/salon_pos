@@ -94,10 +94,13 @@ class _MainShellState extends ConsumerState<MainShell> {
     final tab = _tabs[idx];
     final topPad = MediaQuery.of(context).padding.top;
 
+    final canPop = context.canPop();
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
       drawerScrimColor: Colors.black.withAlpha(100),
+      enableOpenDragGesture: false,
       drawer: Drawer(
         width: _sidebarWidth,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -119,12 +122,14 @@ class _MainShellState extends ConsumerState<MainShell> {
           // 글로벌 상단 바
           _GlobalTopBar(
             tab: tab,
+            canPop: canPop,
             isOnline: _isOnline,
             branchName: _branchName,
             dateStr: _dateStr(),
             timeStr: _timeStr(),
             notifCount: notifCount,
             onHamburger: () => _scaffoldKey.currentState?.openDrawer(),
+            onBack: canPop ? () => context.pop() : null,
           ),
           // 화면 본체
           Expanded(child: widget.child),
@@ -138,21 +143,25 @@ class _MainShellState extends ConsumerState<MainShell> {
 class _GlobalTopBar extends ConsumerWidget {
   const _GlobalTopBar({
     required this.tab,
+    required this.canPop,
     required this.isOnline,
     required this.branchName,
     required this.dateStr,
     required this.timeStr,
     required this.notifCount,
     required this.onHamburger,
+    this.onBack,
   });
 
   final _TabItem tab;
+  final bool canPop;
   final bool isOnline;
   final String branchName;
   final String dateStr;
   final String timeStr;
   final int notifCount;
   final VoidCallback onHamburger;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -167,12 +176,19 @@ class _GlobalTopBar extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          // 햄버거 버튼
-          _IconBtn(
-            icon: Icons.menu_rounded,
-            onTap: onHamburger,
-            size: 22,
-          ),
+          // 뒤로가기 or 햄버거
+          if (canPop)
+            _IconBtn(
+              icon: Icons.arrow_back,
+              onTap: onBack!,
+              size: 22,
+            )
+          else
+            _IconBtn(
+              icon: Icons.menu_rounded,
+              onTap: onHamburger,
+              size: 22,
+            ),
           const SizedBox(width: 6),
           // 화면 아이콘 + 이름
           Icon(tab.activeIcon, size: 18, color: AppColors.primary),

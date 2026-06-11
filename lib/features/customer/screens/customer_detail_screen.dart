@@ -157,7 +157,8 @@ class CustomerDetailScreen extends ConsumerWidget {
 
     return customerAsync.when(
       data: (customer) => customer == null
-          ? Scaffold(appBar: AppBar(title: const Text('顧客詳細')),
+          ? Scaffold(appBar: AppBar(
+        automaticallyImplyLeading: false,title: const Text('顧客詳細')),
               body: const Center(child: Text('顧客が見つかりません')))
           : _CustomerDetailBody(customer: customer, initialTab: initialTab),
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -179,6 +180,7 @@ class _CustomerDetailBody extends ConsumerWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
+        automaticallyImplyLeading: false,
           title: Text(customer.name),
           actions: [
             // VIP 토글

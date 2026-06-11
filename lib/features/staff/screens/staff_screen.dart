@@ -50,6 +50,7 @@ class StaffScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('スタッフ管理'),
         actions: [
           Padding(

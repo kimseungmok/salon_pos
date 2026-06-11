@@ -36,6 +36,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('ポイント・会員設定'),
         actions: [
           if (_dirty)

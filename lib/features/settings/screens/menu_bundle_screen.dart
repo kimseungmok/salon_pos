@@ -55,6 +55,7 @@ class MenuBundleScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('セットメニュー管理'),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
@@ -553,46 +554,30 @@ class _BundleFormSheetState extends ConsumerState<_BundleFormSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _FormLabel('割引率'),
-                            const SizedBox(height: 2),
-                            Row(
-                              children: [
-                                Text(
-                                  '$_discountRate%',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: _discountRate > 0
-                                        ? const Color(0xFFE04444)
-                                        : AppColors.textDisabled,
-                                  ),
-                                ),
-                                if (_discountRate > 0) ...[
-                                  const SizedBox(width: 4),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFFF0F0),
-                                      borderRadius:
-                                          BorderRadius.circular(4),
-                                    ),
-                                    child: const Text('OFF',
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFFE04444))),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            Slider(
-                              value: _discountRate.toDouble(),
-                              min: 0,
-                              max: 50,
-                              divisions: 50,
-                              onChanged: (v) => setState(
-                                  () => _discountRate = v.round()),
-                              activeColor: AppColors.primary,
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              initialValue: _discountRate > 0
+                                  ? _discountRate.toString()
+                                  : '',
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                hintText: '0',
+                                suffixText: '%',
+                                border: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(8)),
+                                isDense: true,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 10),
+                              ),
+                              onChanged: (v) => setState(() {
+                                _discountRate =
+                                    int.tryParse(v.trim()) ?? 0;
+                                if (_discountRate < 0) _discountRate = 0;
+                                if (_discountRate > 100)
+                                  _discountRate = 100;
+                              }),
                             ),
                           ],
                         ),
