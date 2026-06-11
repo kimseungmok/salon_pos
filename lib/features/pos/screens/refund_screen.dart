@@ -828,11 +828,13 @@ class _RefundScreenState extends ConsumerState<RefundScreen> {
           );
         }
       }
+      if (mounted) Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       showTopBanner(context, '返金エラー: $e',
           color: AppColors.error, icon: Icons.error_outline);
-      setState(() => _processing = false);
+    } finally {
+      if (mounted) setState(() => _processing = false);
     }
   }
 
