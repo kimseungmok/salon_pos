@@ -395,26 +395,26 @@ class _MenuList extends ConsumerWidget {
     return menusAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text('$e')),
-      data: (menus) => menus.isEmpty
-          ? const Center(
-              child: Text('メニューがありません',
-                  style: TextStyle(color: AppColors.textSecondary)))
-          : ListView.separated(
-              padding: const EdgeInsets.all(12),
-              itemCount: menus.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (ctx, i) {
-                final topIds = ref.watch(_topMenuIdsProvider).valueOrNull ?? {};
-                return _MenuCard(
+      data: (menus) {
+        final topIds = ref.watch(_topMenuIdsProvider).valueOrNull ?? {};
+        return menus.isEmpty
+            ? const Center(
+                child: Text('メニューがありません',
+                    style: TextStyle(color: AppColors.textSecondary)))
+            : ListView.separated(
+                padding: const EdgeInsets.all(12),
+                itemCount: menus.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 8),
+                itemBuilder: (ctx, i) => _MenuCard(
                   menu: menus[i],
                   isPopular: topIds.contains(menus[i].id),
                   onEdit: () => _showMenuForm(ctx, ref, categoryId, menus[i]),
                   onToggle: () => _toggleMenu(ref, menus[i]),
                   onDelete: () => _deleteMenu(ctx, ref, menus[i]),
                   onDuplicate: () => _duplicateMenu(ref, menus[i]),
-                );
-              },
-            ),
+                ),
+              );
+      },
     );
   }
 
@@ -789,6 +789,8 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
   late TextEditingController _bufferCtrl;
   String _taxType = '10';
   bool _saving = false;
+  bool _nameError = false;
+  bool _priceError = false;
 
   @override
   void initState() {
@@ -839,8 +841,12 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
               // 메뉴명
               TextField(
                 controller: _nameCtrl,
-                decoration: const InputDecoration(labelText: 'メニュー名 *'),
+                decoration: InputDecoration(
+                  labelText: 'メニュー名 *',
+                  errorText: _nameError ? 'メニュー名を入力してください' : null,
+                ),
                 autofocus: true,
+                onChanged: (_) { if (_nameError) setState(() => _nameError = false); },
               ),
               const SizedBox(height: 12),
               // 가격 + 시술 시간
@@ -849,50 +855,63 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
                   Expanded(
                     child: TextField(
                       controller: _priceCtrl,
-                      decoration:
-                          const InputDecoration(labelText: '価格 (¥) *'),
+                      decoration: InputDecoration(
+                        labelText: '価格 (¥) *',
+                        errorText: _priceError ? '価格を入力してください' : null,
+                      ),
                       keyboardType: TextInputType.number,
+                      onChanged: (_) { if (_priceError) setState(() => _priceError = false); },
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _durationCtrl,
-                      decoration:
-                          const InputDecoration(labelText: '施術時間 (分)'),
+                      decoration: const InputDecoration(labelText: '施術時間 (分)'),
                       keyboardType: TextInputType.number,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // 발색 시간 + 버퍼 시간
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _processingCtrl,
-                      decoration: const InputDecoration(
-                        labelText: '発色待ち (分)',
-                        helperText: 'スタッフ離席可能な待ち時間',
-                      ),
-                      keyboardType: TextInputType.number,
+              const SizedBox(height: 4),
+              // 발색 시간 + 버퍼 시간 (접이식)
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  title: const Text('詳細設定',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                  childrenPadding: const EdgeInsets.only(bottom: 8),
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _processingCtrl,
+                            decoration: const InputDecoration(
+                              labelText: '発色待ち (分)',
+                              helperText: 'スタッフ離席可能な待ち時間',
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _bufferCtrl,
+                            decoration: const InputDecoration(
+                              labelText: 'バッファ (分)',
+                              helperText: '片付け・準備時間',
+                            ),
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _bufferCtrl,
-                      decoration: const InputDecoration(
-                        labelText: 'バッファ (分)',
-                        helperText: '片付け・準備時間',
-                      ),
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 4),
               // 세금
               Text('税率', style: AppTextStyles.label),
               const SizedBox(height: 8),
@@ -923,11 +942,16 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
 
   Future<void> _save() async {
     final name = _nameCtrl.text.trim();
-    final price = int.tryParse(_priceCtrl.text) ?? 0;
+    final price = int.tryParse(_priceCtrl.text.trim());
     final duration = int.tryParse(_durationCtrl.text) ?? 60;
     final processing = int.tryParse(_processingCtrl.text) ?? 0;
     final buffer = int.tryParse(_bufferCtrl.text) ?? 0;
-    if (name.isEmpty) return;
+    final hasNameError = name.isEmpty;
+    final hasPriceError = price == null || price <= 0;
+    if (hasNameError || hasPriceError) {
+      setState(() { _nameError = hasNameError; _priceError = hasPriceError; });
+      return;
+    }
 
     setState(() => _saving = true);
     final db = ref.read(databaseProvider);
@@ -937,7 +961,7 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
             ..where((t) => t.id.equals(widget.existing!.id)))
           .write(MenusCompanion(
         name: Value(name),
-        price: Value(price),
+        price: Value(price!),
         durationMin: Value(duration),
         processingMin: Value(processing),
         bufferMin: Value(buffer),
@@ -947,7 +971,7 @@ class _MenuFormSheetState extends ConsumerState<_MenuFormSheet> {
       await db.into(db.menus).insert(MenusCompanion.insert(
         id: _uuid.v4(),
         name: name,
-        price: price,
+        price: price!,
         durationMin: Value(duration),
         processingMin: Value(processing),
         bufferMin: Value(buffer),
