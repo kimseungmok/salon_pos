@@ -293,25 +293,37 @@ class _MenuPanelState extends ConsumerState<_MenuPanel>
     with TickerProviderStateMixin {
   late TabController _tabCtrl;
   int _tabLen = 1;
+  bool _editMode = false;
+  GlobalKey<_EditModeGridState> _editGridKey = GlobalKey<_EditModeGridState>();
 
   @override
   void initState() {
     super.initState();
     _tabCtrl = TabController(length: 1, vsync: this);
+    _tabCtrl.addListener(_onTabChanged);
+  }
+
+  void _onTabChanged() {
+    if (_editMode && !_tabCtrl.indexIsChanging) {
+      setState(() => _editMode = false);
+    }
   }
 
   @override
   void dispose() {
+    _tabCtrl.removeListener(_onTabChanged);
     _tabCtrl.dispose();
     super.dispose();
   }
 
   void _rebuildTabs(int catCount) {
-    final newLen = 1 + catCount + 2; // 즐겨찾기 탭 + 카테고리 + セット + 物販
+    final newLen = 2 + catCount + 2; // よく使う + 売上ランキング + カテゴリ + セット + 物販
     if (newLen == _tabLen) return;
     _tabLen = newLen;
     final old = _tabCtrl;
+    old.removeListener(_onTabChanged);
     _tabCtrl = TabController(length: newLen, vsync: this);
+    _tabCtrl.addListener(_onTabChanged);
     old.dispose();
     if (mounted) setState(() {});
   }
@@ -322,7 +334,7 @@ class _MenuPanelState extends ConsumerState<_MenuPanel>
 
     return catsAsync.when(
       data: (cats) {
-        final newLen = 1 + cats.length + 2; // よく使う + カテゴリ + セット + 物販
+        final newLen = 2 + cats.length + 2; // よく使う + 売上ランキング + カテゴリ + セット + 物販
 
         // TabController 길이 불일치 시 즉시 재생성 스케줄
         if (_tabCtrl.length != newLen) {
@@ -333,14 +345,11 @@ class _MenuPanelState extends ConsumerState<_MenuPanel>
         final tabs = <Widget>[
           const Tab(
             height: 52,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.star_rounded, size: 20, color: AppColors.warning),
-                SizedBox(width: 6),
-                Text('よく使う'),
-              ],
-            ),
+            child: Icon(Icons.star_rounded, size: 22, color: AppColors.warning),
+          ),
+          const Tab(
+            height: 52,
+            child: Icon(Icons.bar_chart_rounded, size: 22, color: Color(0xFF6366F1)),
           ),
           ...cats.map((c) => Tab(height: 52, text: c.name)),
           const Tab(
@@ -433,12 +442,23 @@ class _MenuPanelState extends ConsumerState<_MenuPanel>
               child: TabBarView(
                 controller: _tabCtrl,
                 children: [
-                  _FavoritesGrid(),
-                  ...cats.map((c) => _MenuGrid(categoryId: c.id)),
+                  _FavoritesGrid(editMode: _editMode),
+                  _RankingGrid(),
+                  ...cats.map((c) => _MenuGrid(categoryId: c.id, editMode: _editMode, editGridKey: _editGridKey)),
                   _BundleGrid(),
                   _ProductGrid(),
                 ],
               ),
+            ),
+            // 하단 바: 편집모드 + 상품추가
+            _MenuPanelBottomBar(
+              editMode: _editMode,
+              onToggleEdit: () => setState(() => _editMode = !_editMode),
+              onAddMenu: () => context.push(AppRoutes.settingsMenus),
+              onCancelEdit: () async {
+                await _editGridKey.currentState?.revertAll();
+                if (mounted) setState(() => _editMode = false);
+              },
             ),
           ],
         );
@@ -453,6 +473,102 @@ class _MenuPanelState extends ConsumerState<_MenuPanel>
     showDialog(
       context: context,
       builder: (_) => const _MenuSearchDialog(),
+    );
+  }
+}
+
+// ─── 메뉴 패널 하단 바 ────────────────────────────────────────────────────
+class _MenuPanelBottomBar extends StatelessWidget {
+  const _MenuPanelBottomBar({
+    required this.editMode,
+    required this.onToggleEdit,
+    required this.onAddMenu,
+    required this.onCancelEdit,
+  });
+  final bool editMode;
+  final VoidCallback onToggleEdit;
+  final VoidCallback onAddMenu;
+  final VoidCallback onCancelEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        children: [
+          if (editMode) ...[
+            InkWell(
+              onTap: onCancelEdit,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.close, size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text('キャンセル',
+                        style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+            ),
+            Container(width: 1, height: 20, color: AppColors.border),
+          ],
+          // 編集モード / 完了
+          InkWell(
+            onTap: onToggleEdit,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    editMode ? Icons.check_circle_outline : Icons.edit_outlined,
+                    size: 16,
+                    color: editMode ? AppColors.primary : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    editMode ? '完了' : '編集モード',
+                    style: AppTextStyles.caption.copyWith(
+                      color: editMode ? AppColors.primary : AppColors.textSecondary,
+                      fontWeight: editMode ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!editMode) ...[
+            Container(width: 1, height: 20, color: AppColors.border),
+            // 商品追加
+            InkWell(
+              onTap: onAddMenu,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.add_circle_outline,
+                        size: 16, color: AppColors.textSecondary),
+                    const SizedBox(width: 6),
+                    Text('商品追加',
+                        style: AppTextStyles.caption.copyWith(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -883,24 +999,62 @@ class _ProductCard extends ConsumerWidget {
 }
 
 // ─── 즐겨찾기 그리드 ──────────────────────────────────────────────────────
-class _FavoritesGrid extends ConsumerStatefulWidget {
+class _FavoritesGrid extends ConsumerWidget {
+  const _FavoritesGrid({required this.editMode});
+  final bool editMode;
+
   @override
-  ConsumerState<_FavoritesGrid> createState() => _FavoritesGridState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(favoritesMenusProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('エラー: $e')),
+      data: (menus) {
+        if (menus.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star_border,
+                    size: 48, color: AppColors.textDisabled),
+                const SizedBox(height: 12),
+                Text('お気に入りがありません',
+                    style: AppTextStyles.body2
+                        .copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                Text('編集モードで★をタップするとここに表示されます',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.caption
+                        .copyWith(color: AppColors.textDisabled)),
+              ],
+            ),
+          );
+        }
+        return _MenuGridView(menus: menus, editMode: editMode);
+      },
+    );
+  }
 }
 
-class _FavoritesGridState extends ConsumerState<_FavoritesGrid> {
-  late Future<List<MenusData>> _menusFuture;
+// ─── 売上ランキング ────────────────────────────────────────────────────────
+class _RankingGrid extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_RankingGrid> createState() => _RankingGridState();
+}
+
+class _RankingGridState extends ConsumerState<_RankingGrid> {
+  late Future<List<MenusData>> _future;
 
   @override
   void initState() {
     super.initState();
-    _menusFuture = ref.read(databaseProvider).getFrequentMenus();
+    _future = ref.read(databaseProvider).getFrequentMenus();
   }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<MenusData>>(
-      future: _menusFuture,
+      future: _future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -911,7 +1065,7 @@ class _FavoritesGridState extends ConsumerState<_FavoritesGrid> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.star_border,
+                const Icon(Icons.bar_chart_rounded,
                     size: 48, color: AppColors.textDisabled),
                 const SizedBox(height: 12),
                 Text('まだ売上データがありません',
@@ -926,7 +1080,7 @@ class _FavoritesGridState extends ConsumerState<_FavoritesGrid> {
             ),
           );
         }
-        return _MenuGridView(menus: menus);
+        return _MenuGridView(menus: menus, editMode: false);
       },
     );
   }
@@ -934,14 +1088,18 @@ class _FavoritesGridState extends ConsumerState<_FavoritesGrid> {
 
 // ─── 카테고리별 메뉴 그리드 ───────────────────────────────────────────────
 class _MenuGrid extends ConsumerWidget {
-  const _MenuGrid({required this.categoryId});
+  const _MenuGrid({required this.categoryId, required this.editMode, this.editGridKey});
   final String categoryId;
+  final bool editMode;
+  final GlobalKey<_EditModeGridState>? editGridKey;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final menusAsync = ref.watch(menusByCategoryProvider(categoryId));
+    final menusAsync = editMode
+        ? ref.watch(menusByCategoryAllProvider(categoryId))
+        : ref.watch(menusByCategoryProvider(categoryId));
     return menusAsync.when(
-      data: (menus) => _MenuGridView(menus: menus),
+      data: (menus) => _MenuGridView(menus: menus, editMode: editMode, editGridKey: editGridKey),
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) =>
           Center(child: Text('$e', style: AppTextStyles.caption)),
@@ -949,31 +1107,577 @@ class _MenuGrid extends ConsumerWidget {
   }
 }
 
-class _MenuGridView extends ConsumerWidget {
-  const _MenuGridView({required this.menus});
+// ─── 페이지네이션 그리드 뷰 ──────────────────────────────────────────────
+const int _kCols = 5;
+const int _kRows = 2;
+const int _kPerPage = _kCols * _kRows;
+const double _kCardW = 152.0;
+const double _kCardH = 90.0;
+const double _kSpacing = 8.0;
+
+class _MenuGridView extends ConsumerStatefulWidget {
+  const _MenuGridView({required this.menus, required this.editMode, this.editGridKey});
   final List<MenusData> menus;
+  final bool editMode;
+  final GlobalKey<_EditModeGridState>? editGridKey;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MenuGridView> createState() => _MenuGridViewState();
+}
+
+class _MenuGridViewState extends ConsumerState<_MenuGridView> {
+  final PageController _pageCtrl = PageController();
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_MenuGridView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.editMode && !widget.editMode && _pageCtrl.hasClients) {
+      _pageCtrl.jumpToPage(0);
+      setState(() => _currentPage = 0);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final menus = widget.menus;
     if (menus.isEmpty) {
-      return Center(
-        child: Text('メニューがありません', style: AppTextStyles.caption),
+      return Center(child: Text('メニューがありません', style: AppTextStyles.caption));
+    }
+
+    if (widget.editMode) {
+      return _EditModeGrid(key: widget.editGridKey, menus: menus, readOnly: false);
+    }
+
+    // 일반 모드: 슬롯 기반 페이지네이션
+    return _EditModeGrid(menus: menus, readOnly: true);
+  }
+}
+
+class _PageNav extends StatelessWidget {
+  const _PageNav({
+    required this.current,
+    required this.total,
+    required this.onPrev,
+    required this.onNext,
+  });
+  final int current;
+  final int total;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 36,
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left, size: 20),
+            color: onPrev != null ? AppColors.textPrimary : AppColors.textDisabled,
+            onPressed: onPrev,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${current + 1} / $total',
+            style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.chevron_right, size: 20),
+            color: onNext != null ? AppColors.textPrimary : AppColors.textDisabled,
+            onPressed: onNext,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── 편집모드: 자유 배치 그리드 (빈 셀 허용) ────────────────────────────────
+class _EditModeGrid extends ConsumerStatefulWidget {
+  const _EditModeGrid({super.key, required this.menus, this.readOnly = false});
+  final List<MenusData> menus;
+  final bool readOnly;
+
+  @override
+  ConsumerState<_EditModeGrid> createState() => _EditModeGridState();
+}
+
+class _EditModeGridState extends ConsumerState<_EditModeGrid> {
+  late Map<String, int> _slotMap;
+  late Map<String, int> _originalSlotMap;
+  int? _draggingMenuSlot;
+  final PageController _pageCtrl = PageController();
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _slotMap = _buildSlotMap(widget.menus);
+    _originalSlotMap = Map.from(_slotMap);
+  }
+
+  Future<void> revertAll() async {
+    final db = ref.read(databaseProvider);
+    for (final entry in _originalSlotMap.entries) {
+      await (db.update(db.menus)..where((t) => t.id.equals(entry.key)))
+          .write(MenusCompanion(posSlot: Value(entry.value)));
+    }
+    if (mounted) setState(() => _slotMap = Map.from(_originalSlotMap));
+  }
+
+  @override
+  void dispose() {
+    _pageCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_EditModeGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.menus != widget.menus) {
+      // 새 메뉴는 posSlot 반영, 기존 슬롯 맵 유지
+      final newMap = _buildSlotMap(widget.menus);
+      _slotMap = newMap;
+    }
+  }
+
+  Map<String, int> _buildSlotMap(List<MenusData> menus) {
+    final map = <String, int>{};
+    final occupied = <int>{};
+
+    // posSlot 이 있는 항목 먼저 배치
+    for (final m in menus) {
+      if (m.posSlot != null) {
+        map[m.id] = m.posSlot!;
+        occupied.add(m.posSlot!);
+      }
+    }
+    // posSlot 없는 항목 자동 배치 (빈 슬롯 순서대로)
+    int auto = 0;
+    for (final m in menus) {
+      if (m.posSlot == null) {
+        while (occupied.contains(auto)) auto++;
+        map[m.id] = auto;
+        occupied.add(auto);
+        auto++;
+      }
+    }
+    return map;
+  }
+
+  int get _totalSlots {
+    if (_slotMap.isEmpty) return _kCols;
+    final maxSlot = _slotMap.values.reduce((a, b) => a > b ? a : b);
+    // 최소 2행, 마지막 행 다음 빈 행 1개 추가
+    final rows = (maxSlot / _kCols).floor() + 2;
+    return rows * _kCols;
+  }
+
+  MenusData? _menuAtSlot(int slot) {
+    final id = _slotMap.entries
+        .where((e) => e.value == slot)
+        .map((e) => e.key)
+        .firstOrNull;
+    if (id == null) return null;
+    return widget.menus.firstWhere((m) => m.id == id);
+  }
+
+  Future<void> _moveToSlot(String menuId, int newSlot) async {
+    // 목적지에 다른 아이템이 있으면 swap
+    final existingId = _slotMap.entries
+        .where((e) => e.value == newSlot)
+        .map((e) => e.key)
+        .firstOrNull;
+
+    setState(() {
+      if (existingId != null) {
+        _slotMap[existingId] = _slotMap[menuId]!;
+      }
+      _slotMap[menuId] = newSlot;
+      _draggingMenuSlot = null;
+    });
+
+    // DB 저장
+    final db = ref.read(databaseProvider);
+    await (db.update(db.menus)..where((t) => t.id.equals(menuId)))
+        .write(MenusCompanion(posSlot: Value(newSlot)));
+    if (existingId != null) {
+      final swapSlot = _slotMap[menuId]!;
+      // swap 후엔 이미 setState로 변경됐으므로 현재 _slotMap[existingId] 사용
+      // (위 setState 에서 existingId → oldSlot 으로 이미 변경됨)
+      final oldSlot = _slotMap[existingId]!;
+      await (db.update(db.menus)..where((t) => t.id.equals(existingId)))
+          .write(MenusCompanion(posSlot: Value(oldSlot)));
+    }
+  }
+
+  Future<void> _toggleVisibility(MenusData menu) async {
+    final db = ref.read(databaseProvider);
+    await (db.update(db.menus)..where((t) => t.id.equals(menu.id)))
+        .write(MenusCompanion(isActive: Value(!menu.isActive)));
+  }
+
+  Future<void> _toggleFavorite(MenusData menu) async {
+    final db = ref.read(databaseProvider);
+    await (db.update(db.menus)..where((t) => t.id.equals(menu.id)))
+        .write(MenusCompanion(isFavorite: Value(!menu.isFavorite)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final totalSlots = _totalSlots;
+    final rows = (totalSlots / _kCols).ceil();
+    final readOnly = widget.readOnly;
+
+    // readOnly(일반 모드) 일 때는 페이지 단위로 보여줌 (< N/M > 네비게이터 포함)
+    if (readOnly) {
+      final pageCount = (rows / _kRows).ceil().clamp(1, 999);
+      return Column(
+        children: [
+          Expanded(
+            child: LayoutBuilder(builder: (ctx, constraints) {
+              final cardW = (constraints.maxWidth - 20 - (_kCols - 1) * _kSpacing) / _kCols;
+              return PageView.builder(
+                controller: _pageCtrl,
+                onPageChanged: (p) => setState(() => _currentPage = p),
+                itemCount: pageCount,
+                itemBuilder: (_, page) {
+                  final rowStart = page * _kRows;
+                  final rowEnd = (rowStart + _kRows).clamp(0, rows);
+                  return Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Column(
+                      children: List.generate(rowEnd - rowStart, (ri) {
+                        final row = rowStart + ri;
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: ri < rowEnd - rowStart - 1 ? _kSpacing : 0),
+                          child: Row(
+                            children: List.generate(_kCols, (col) {
+                              final slot = row * _kCols + col;
+                              final menu = _menuAtSlot(slot);
+                              return Padding(
+                                padding: EdgeInsets.only(right: col < _kCols - 1 ? _kSpacing : 0),
+                                child: SizedBox(
+                                  width: cardW,
+                                  height: _kCardH,
+                                  child: menu != null ? _MenuCard(menu: menu) : const SizedBox(),
+                                ),
+                              );
+                            }),
+                          ),
+                        );
+                      }),
+                    ),
+                  );
+                },
+              );
+            }),
+          ),
+          _PageNav(
+            current: _currentPage,
+            total: pageCount,
+            onPrev: _currentPage > 0
+                ? () => _pageCtrl.previousPage(duration: const Duration(milliseconds: 220), curve: Curves.easeInOut)
+                : null,
+            onNext: _currentPage < pageCount - 1
+                ? () => _pageCtrl.nextPage(duration: const Duration(milliseconds: 220), curve: Curves.easeInOut)
+                : null,
+          ),
+        ],
       );
     }
-    return Scrollbar(
-      thumbVisibility: true,
-      trackVisibility: true,
-      child: GridView.builder(
+
+    // 편집 모드
+    return Container(
+      color: AppColors.background,
+      child: LayoutBuilder(builder: (context, constraints) {
+        final cardW = (constraints.maxWidth - 20 - (_kCols - 1) * _kSpacing) / _kCols;
+        return SingleChildScrollView(
         padding: const EdgeInsets.all(10),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 160,
-          mainAxisExtent: 90,
-          crossAxisSpacing: 8,
-          mainAxisSpacing: 8,
+        child: Column(
+          children: List.generate(rows, (row) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: _kSpacing),
+              child: Row(
+                children: List.generate(_kCols, (col) {
+                  final slot = row * _kCols + col;
+                  final menu = _menuAtSlot(slot);
+                  return Padding(
+                    padding: EdgeInsets.only(right: col < _kCols - 1 ? _kSpacing : 0),
+                    child: SizedBox(
+                      width: cardW,
+                      height: _kCardH,
+                      child: menu != null
+                          ? _EditCard(
+                              key: ValueKey(menu.id),
+                              menu: menu,
+                              slot: slot,
+                              onMoveToSlot: _moveToSlot,
+                              onDragStart: () => setState(() => _draggingMenuSlot = slot),
+                              onDragEnd: () => setState(() => _draggingMenuSlot = null),
+                              onToggleVisibility: () => _toggleVisibility(menu),
+                              onToggleFavorite: () => _toggleFavorite(menu),
+                            )
+                          : _EmptySlot(
+                              slot: slot,
+                              isDragOver: false,
+                              onAccept: (menuId) => _moveToSlot(menuId, slot),
+                            ),
+                    ),
+                  );
+                }),
+              ),
+            );
+          }),
         ),
-        itemCount: menus.length,
-        itemBuilder: (_, i) => _MenuCard(menu: menus[i]),
+        );
+      }),
+    );
+  }
+}
+
+// ─── 편집모드 카드 ─────────────────────────────────────────────────────────
+class _EditCard extends StatelessWidget {
+  const _EditCard({
+    super.key,
+    required this.menu,
+    required this.slot,
+    required this.onMoveToSlot,
+    required this.onDragStart,
+    required this.onDragEnd,
+    required this.onToggleVisibility,
+    required this.onToggleFavorite,
+  });
+  final MenusData menu;
+  final int slot;
+  final Future<void> Function(String menuId, int slot) onMoveToSlot;
+  final VoidCallback onDragStart;
+  final VoidCallback onDragEnd;
+  final VoidCallback onToggleVisibility;
+  final VoidCallback onToggleFavorite;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _parseColor(menu.color) ?? AppColors.primary;
+    final isHidden = !menu.isActive;
+    final isFav = menu.isFavorite;
+
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (d) => d.data != menu.id,
+      onAcceptWithDetails: (d) => onMoveToSlot(d.data, slot),
+      builder: (context, candidateData, _) {
+        final isOver = candidateData.isNotEmpty;
+        return LongPressDraggable<String>(
+          data: menu.id,
+          delay: const Duration(milliseconds: 180),
+          onDragStarted: onDragStart,
+          onDraggableCanceled: (_, __) => onDragEnd(),
+          onDragCompleted: onDragEnd,
+          feedback: Material(
+            elevation: 10,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            child: SizedBox(
+              width: _kCardW,
+              height: _kCardH,
+              child: _buildContent(color, isHidden, isFav, opacity: 0.95),
+            ),
+          ),
+          childWhenDragging: Container(
+            decoration: BoxDecoration(
+              color: AppColors.border.withAlpha(80),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                  color: AppColors.border, width: 1.5,
+                  style: BorderStyle.solid),
+            ),
+          ),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: isOver
+                  ? Border.all(color: AppColors.primary, width: 2.5)
+                  : null,
+            ),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _buildContent(color, isHidden, isFav,
+                    opacity: isHidden ? 0.45 : 1.0),
+                // 비표시 토글 (우상단)
+                Positioned(
+                  top: 3,
+                  right: 3,
+                  child: _EditIconBtn(
+                    icon: isHidden ? Icons.visibility_off : Icons.visibility,
+                    color: isHidden ? AppColors.textDisabled : AppColors.primary,
+                    onTap: onToggleVisibility,
+                  ),
+                ),
+                // 즐겨찾기 토글 (우하단)
+                Positioned(
+                  bottom: 3,
+                  right: 3,
+                  child: _EditIconBtn(
+                    icon: isFav ? Icons.star_rounded : Icons.star_border_rounded,
+                    color: isFav ? AppColors.warning : AppColors.textDisabled,
+                    onTap: onToggleFavorite,
+                  ),
+                ),
+                // 드래그 핸들 표시 (좌상단)
+                Positioned(
+                  top: 4,
+                  left: 6,
+                  child: Icon(Icons.drag_indicator,
+                      size: 14, color: color.withAlpha(140)),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContent(Color color, bool isHidden, bool isFav,
+      {required double opacity}) {
+    return Opacity(
+      opacity: opacity,
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+                color: isHidden
+                    ? AppColors.border
+                    : color.withAlpha(80),
+                width: 1.2),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadius.md - 1),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                    width: 4,
+                    color: isHidden ? AppColors.border : color),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 28, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            menu.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: isHidden
+                                  ? AppColors.textDisabled
+                                  : AppColors.textPrimary,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '¥${_fmt(menu.price)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: isHidden ? AppColors.textDisabled : color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
+    );
+  }
+}
+
+class _EditIconBtn extends StatelessWidget {
+  const _EditIconBtn(
+      {required this.icon, required this.color, required this.onTap});
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: Colors.white.withAlpha(230),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withAlpha(25), blurRadius: 4, offset: const Offset(0, 1))
+          ],
+        ),
+        child: Icon(icon, size: 17, color: color),
+      ),
+    );
+  }
+}
+
+// ─── 빈 슬롯 (드롭 타겟) ────────────────────────────────────────────────────
+class _EmptySlot extends StatelessWidget {
+  const _EmptySlot(
+      {required this.slot, required this.isDragOver, required this.onAccept});
+  final int slot;
+  final bool isDragOver;
+  final void Function(String menuId) onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    return DragTarget<String>(
+      onAcceptWithDetails: (d) => onAccept(d.data),
+      builder: (context, candidateData, _) {
+        final over = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          decoration: BoxDecoration(
+            color: over
+                ? AppColors.primary.withAlpha(18)
+                : AppColors.border.withAlpha(40),
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(
+              color: over ? AppColors.primary : AppColors.border,
+              width: over ? 2 : 1,
+              style: BorderStyle.solid,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -1704,47 +2408,43 @@ class _OrderItemTileState extends ConsumerState<_OrderItemTile> {
     final item = widget.item;
     final notifier = ref.read(posProvider.notifier);
 
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 180),
-      curve: Curves.easeInOut,
-      child: InkWell(
-        onTap: () => setState(() => _expanded = !_expanded),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 항상 표시: 이름 ×갯수 + 금액
-              Row(
-                children: [
-                  // 스태프 도트
-                  Container(
-                    width: 7,
-                    height: 7,
-                    margin: const EdgeInsets.only(right: 7, top: 1),
-                    decoration: BoxDecoration(
-                      color: item.staffId != null ? AppColors.primary : AppColors.border,
-                      shape: BoxShape.circle,
+    return InkWell(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 항상 표시: 이름 ×갯수 + 금액
+            Row(
+              children: [
+                // 스태프 도트
+                Container(
+                  width: 7,
+                  height: 7,
+                  margin: const EdgeInsets.only(right: 7, top: 1),
+                  decoration: BoxDecoration(
+                    color: item.staffId != null ? AppColors.primary : AppColors.border,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  child: RichText(
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      style: AppTextStyles.body2.copyWith(fontWeight: FontWeight.w500),
+                      children: [
+                        TextSpan(text: item.name),
+                        TextSpan(
+                          text: ' ×${item.qty}',
+                          style: AppTextStyles.body2.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ],
                     ),
                   ),
-                  Expanded(
-                    child: RichText(
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: AppTextStyles.body2.copyWith(fontWeight: FontWeight.w500),
-                        children: [
-                          TextSpan(text: item.name),
-                          if (item.qty > 1)
-                            TextSpan(
-                              text: ' ×${item.qty}',
-                              style: AppTextStyles.body2.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w700),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
+                ),
                   const SizedBox(width: 8),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -1770,83 +2470,93 @@ class _OrderItemTileState extends ConsumerState<_OrderItemTile> {
                 ],
               ),
               // 확장 시: - qty + (좌측) | 스태프명/할인 | 삭제(우측)
-              if (_expanded) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    // - qty + 좌측 정렬
-                    _QtyBtn(
-                      icon: Icons.remove,
-                      onTap: () => notifier.updateQty(item.id, item.qty - 1),
-                    ),
-                    GestureDetector(
-                      onTap: () => _editQty(context),
-                      child: Container(
-                        constraints: const BoxConstraints(minWidth: 34),
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        margin: const EdgeInsets.symmetric(horizontal: 4),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Text('${item.qty}',
-                            textAlign: TextAlign.center,
-                            style: AppTextStyles.body2.copyWith(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                    _QtyBtn(
-                      icon: Icons.add,
-                      onTap: () => notifier.updateQty(item.id, item.qty + 1),
-                    ),
-                    const SizedBox(width: 8),
-                    // 스태프명/할인 중앙
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (item.staffName != null)
-                            Text(item.staffName!,
-                                style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.textSecondary)),
-                          if (item.discountAmount > 0)
-                            Text('-¥${_fmt(item.discountAmount)} 割引',
-                                style: AppTextStyles.caption.copyWith(
-                                    color: AppColors.error)),
-                        ],
-                      ),
-                    ),
-                    // 삭제 버튼 우측
-                    GestureDetector(
-                      onTap: () {
-                        notifier.removeItem(item.id);
-                        showTopBanner(
-                          context,
-                          '「${item.name}」を削除しました',
-                          color: const Color(0xFF64748B),
-                          icon: Icons.delete_outline,
-                          duration: const Duration(seconds: 4),
-                          actionLabel: '元に戻す',
-                          onAction: () => notifier.restoreItem(item),
-                        );
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.errorLight,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(Icons.delete_outline,
-                            size: 16, color: AppColors.error),
-                      ),
-                    ),
-                  ],
+              AnimatedSize(
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeInOut,
+                child: ClipRect(
+                  child: _expanded
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                // - qty + 좌측 정렬
+                                _QtyBtn(
+                                  icon: Icons.remove,
+                                  onTap: () => notifier.updateQty(item.id, item.qty - 1),
+                                ),
+                                GestureDetector(
+                                  onTap: () => _editQty(context),
+                                  child: Container(
+                                    constraints: const BoxConstraints(minWidth: 34),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.background,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.border),
+                                    ),
+                                    child: Text('${item.qty}',
+                                        textAlign: TextAlign.center,
+                                        style: AppTextStyles.body2.copyWith(fontWeight: FontWeight.w700)),
+                                  ),
+                                ),
+                                _QtyBtn(
+                                  icon: Icons.add,
+                                  onTap: () => notifier.updateQty(item.id, item.qty + 1),
+                                ),
+                                const SizedBox(width: 8),
+                                // 스태프명/할인 중앙
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      if (item.staffName != null)
+                                        Text(item.staffName!,
+                                            style: AppTextStyles.caption.copyWith(
+                                                color: AppColors.textSecondary)),
+                                      if (item.discountAmount > 0)
+                                        Text('-¥${_fmt(item.discountAmount)} 割引',
+                                            style: AppTextStyles.caption.copyWith(
+                                                color: AppColors.error)),
+                                    ],
+                                  ),
+                                ),
+                                // 삭제 버튼 우측
+                                GestureDetector(
+                                  onTap: () {
+                                    notifier.removeItem(item.id);
+                                    showTopBanner(
+                                      context,
+                                      '「${item.name}」を削除しました',
+                                      color: const Color(0xFF64748B),
+                                      icon: Icons.delete_outline,
+                                      duration: const Duration(seconds: 4),
+                                      actionLabel: '元に戻す',
+                                      onAction: () => notifier.restoreItem(item),
+                                    );
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.errorLight,
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(Icons.delete_outline,
+                                        size: 16, color: AppColors.error),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      : const SizedBox.shrink(),
                 ),
-              ],
+              ),
             ],
           ),
         ),
-      ),
     );
   }
 

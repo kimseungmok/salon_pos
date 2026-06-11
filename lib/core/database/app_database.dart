@@ -108,7 +108,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -144,6 +144,11 @@ class AppDatabase extends _$AppDatabase {
             // 초기 데이터
             await _initBlockedTimeTypes();
             await _initLoyaltyTiers();
+          }
+          if (from < 3) {
+            // v2 → v3: menus テーブルにPOSグリッド位置・お気に入りカラム追加
+            await m.addColumn(menus, menus.posSlot);
+            await m.addColumn(menus, menus.isFavorite);
           }
         },
         beforeOpen: (details) async {

@@ -15384,6 +15384,32 @@ class $MenusTable extends Menus with TableInfo<$MenusTable, MenusData> {
     requiredDuringInsert: false,
     defaultValue: const Constant(0),
   );
+  static const VerificationMeta _posSlotMeta = const VerificationMeta(
+    'posSlot',
+  );
+  @override
+  late final GeneratedColumn<int> posSlot = GeneratedColumn<int>(
+    'pos_slot',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _isFavoriteMeta = const VerificationMeta(
+    'isFavorite',
+  );
+  @override
+  late final GeneratedColumn<bool> isFavorite = GeneratedColumn<bool>(
+    'is_favorite',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_favorite" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _isAvailableOnlineMeta = const VerificationMeta(
     'isAvailableOnline',
   );
@@ -15453,6 +15479,8 @@ class $MenusTable extends Menus with TableInfo<$MenusTable, MenusData> {
     color,
     photoUrl,
     sortOrder,
+    posSlot,
+    isFavorite,
     isAvailableOnline,
     isActive,
     createdAt,
@@ -15560,6 +15588,18 @@ class $MenusTable extends Menus with TableInfo<$MenusTable, MenusData> {
         sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
       );
     }
+    if (data.containsKey('pos_slot')) {
+      context.handle(
+        _posSlotMeta,
+        posSlot.isAcceptableOrUnknown(data['pos_slot']!, _posSlotMeta),
+      );
+    }
+    if (data.containsKey('is_favorite')) {
+      context.handle(
+        _isFavoriteMeta,
+        isFavorite.isAcceptableOrUnknown(data['is_favorite']!, _isFavoriteMeta),
+      );
+    }
     if (data.containsKey('is_available_online')) {
       context.handle(
         _isAvailableOnlineMeta,
@@ -15648,6 +15688,14 @@ class $MenusTable extends Menus with TableInfo<$MenusTable, MenusData> {
         DriftSqlType.int,
         data['${effectivePrefix}sort_order'],
       )!,
+      posSlot: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pos_slot'],
+      ),
+      isFavorite: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_favorite'],
+      )!,
       isAvailableOnline: attachedDatabase.typeMapping.read(
         DriftSqlType.bool,
         data['${effectivePrefix}is_available_online'],
@@ -15687,6 +15735,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
   final String? color;
   final String? photoUrl;
   final int sortOrder;
+  final int? posSlot;
+  final bool isFavorite;
   final bool isAvailableOnline;
   final bool isActive;
   final String createdAt;
@@ -15705,6 +15755,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
     this.color,
     this.photoUrl,
     required this.sortOrder,
+    this.posSlot,
+    required this.isFavorite,
     required this.isAvailableOnline,
     required this.isActive,
     required this.createdAt,
@@ -15736,6 +15788,10 @@ class MenusData extends DataClass implements Insertable<MenusData> {
       map['photo_url'] = Variable<String>(photoUrl);
     }
     map['sort_order'] = Variable<int>(sortOrder);
+    if (!nullToAbsent || posSlot != null) {
+      map['pos_slot'] = Variable<int>(posSlot);
+    }
+    map['is_favorite'] = Variable<bool>(isFavorite);
     map['is_available_online'] = Variable<bool>(isAvailableOnline);
     map['is_active'] = Variable<bool>(isActive);
     map['created_at'] = Variable<String>(createdAt);
@@ -15768,6 +15824,10 @@ class MenusData extends DataClass implements Insertable<MenusData> {
           ? const Value.absent()
           : Value(photoUrl),
       sortOrder: Value(sortOrder),
+      posSlot: posSlot == null && nullToAbsent
+          ? const Value.absent()
+          : Value(posSlot),
+      isFavorite: Value(isFavorite),
       isAvailableOnline: Value(isAvailableOnline),
       isActive: Value(isActive),
       createdAt: Value(createdAt),
@@ -15794,6 +15854,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
       color: serializer.fromJson<String?>(json['color']),
       photoUrl: serializer.fromJson<String?>(json['photoUrl']),
       sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      posSlot: serializer.fromJson<int?>(json['posSlot']),
+      isFavorite: serializer.fromJson<bool>(json['isFavorite']),
       isAvailableOnline: serializer.fromJson<bool>(json['isAvailableOnline']),
       isActive: serializer.fromJson<bool>(json['isActive']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
@@ -15817,6 +15879,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
       'color': serializer.toJson<String?>(color),
       'photoUrl': serializer.toJson<String?>(photoUrl),
       'sortOrder': serializer.toJson<int>(sortOrder),
+      'posSlot': serializer.toJson<int?>(posSlot),
+      'isFavorite': serializer.toJson<bool>(isFavorite),
       'isAvailableOnline': serializer.toJson<bool>(isAvailableOnline),
       'isActive': serializer.toJson<bool>(isActive),
       'createdAt': serializer.toJson<String>(createdAt),
@@ -15838,6 +15902,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
     Value<String?> color = const Value.absent(),
     Value<String?> photoUrl = const Value.absent(),
     int? sortOrder,
+    Value<int?> posSlot = const Value.absent(),
+    bool? isFavorite,
     bool? isAvailableOnline,
     bool? isActive,
     String? createdAt,
@@ -15856,6 +15922,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
     color: color.present ? color.value : this.color,
     photoUrl: photoUrl.present ? photoUrl.value : this.photoUrl,
     sortOrder: sortOrder ?? this.sortOrder,
+    posSlot: posSlot.present ? posSlot.value : this.posSlot,
+    isFavorite: isFavorite ?? this.isFavorite,
     isAvailableOnline: isAvailableOnline ?? this.isAvailableOnline,
     isActive: isActive ?? this.isActive,
     createdAt: createdAt ?? this.createdAt,
@@ -15884,6 +15952,10 @@ class MenusData extends DataClass implements Insertable<MenusData> {
       color: data.color.present ? data.color.value : this.color,
       photoUrl: data.photoUrl.present ? data.photoUrl.value : this.photoUrl,
       sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      posSlot: data.posSlot.present ? data.posSlot.value : this.posSlot,
+      isFavorite: data.isFavorite.present
+          ? data.isFavorite.value
+          : this.isFavorite,
       isAvailableOnline: data.isAvailableOnline.present
           ? data.isAvailableOnline.value
           : this.isAvailableOnline,
@@ -15909,6 +15981,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
           ..write('color: $color, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('posSlot: $posSlot, ')
+          ..write('isFavorite: $isFavorite, ')
           ..write('isAvailableOnline: $isAvailableOnline, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -15932,6 +16006,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
     color,
     photoUrl,
     sortOrder,
+    posSlot,
+    isFavorite,
     isAvailableOnline,
     isActive,
     createdAt,
@@ -15954,6 +16030,8 @@ class MenusData extends DataClass implements Insertable<MenusData> {
           other.color == this.color &&
           other.photoUrl == this.photoUrl &&
           other.sortOrder == this.sortOrder &&
+          other.posSlot == this.posSlot &&
+          other.isFavorite == this.isFavorite &&
           other.isAvailableOnline == this.isAvailableOnline &&
           other.isActive == this.isActive &&
           other.createdAt == this.createdAt &&
@@ -15974,6 +16052,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
   final Value<String?> color;
   final Value<String?> photoUrl;
   final Value<int> sortOrder;
+  final Value<int?> posSlot;
+  final Value<bool> isFavorite;
   final Value<bool> isAvailableOnline;
   final Value<bool> isActive;
   final Value<String> createdAt;
@@ -15993,6 +16073,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
     this.color = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.posSlot = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.isAvailableOnline = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -16013,6 +16095,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
     this.color = const Value.absent(),
     this.photoUrl = const Value.absent(),
     this.sortOrder = const Value.absent(),
+    this.posSlot = const Value.absent(),
+    this.isFavorite = const Value.absent(),
     this.isAvailableOnline = const Value.absent(),
     this.isActive = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -16035,6 +16119,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
     Expression<String>? color,
     Expression<String>? photoUrl,
     Expression<int>? sortOrder,
+    Expression<int>? posSlot,
+    Expression<bool>? isFavorite,
     Expression<bool>? isAvailableOnline,
     Expression<bool>? isActive,
     Expression<String>? createdAt,
@@ -16055,6 +16141,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
       if (color != null) 'color': color,
       if (photoUrl != null) 'photo_url': photoUrl,
       if (sortOrder != null) 'sort_order': sortOrder,
+      if (posSlot != null) 'pos_slot': posSlot,
+      if (isFavorite != null) 'is_favorite': isFavorite,
       if (isAvailableOnline != null) 'is_available_online': isAvailableOnline,
       if (isActive != null) 'is_active': isActive,
       if (createdAt != null) 'created_at': createdAt,
@@ -16077,6 +16165,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
     Value<String?>? color,
     Value<String?>? photoUrl,
     Value<int>? sortOrder,
+    Value<int?>? posSlot,
+    Value<bool>? isFavorite,
     Value<bool>? isAvailableOnline,
     Value<bool>? isActive,
     Value<String>? createdAt,
@@ -16097,6 +16187,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
       color: color ?? this.color,
       photoUrl: photoUrl ?? this.photoUrl,
       sortOrder: sortOrder ?? this.sortOrder,
+      posSlot: posSlot ?? this.posSlot,
+      isFavorite: isFavorite ?? this.isFavorite,
       isAvailableOnline: isAvailableOnline ?? this.isAvailableOnline,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
@@ -16147,6 +16239,12 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
     if (sortOrder.present) {
       map['sort_order'] = Variable<int>(sortOrder.value);
     }
+    if (posSlot.present) {
+      map['pos_slot'] = Variable<int>(posSlot.value);
+    }
+    if (isFavorite.present) {
+      map['is_favorite'] = Variable<bool>(isFavorite.value);
+    }
     if (isAvailableOnline.present) {
       map['is_available_online'] = Variable<bool>(isAvailableOnline.value);
     }
@@ -16181,6 +16279,8 @@ class MenusCompanion extends UpdateCompanion<MenusData> {
           ..write('color: $color, ')
           ..write('photoUrl: $photoUrl, ')
           ..write('sortOrder: $sortOrder, ')
+          ..write('posSlot: $posSlot, ')
+          ..write('isFavorite: $isFavorite, ')
           ..write('isAvailableOnline: $isAvailableOnline, ')
           ..write('isActive: $isActive, ')
           ..write('createdAt: $createdAt, ')
@@ -55079,6 +55179,8 @@ typedef $$MenusTableCreateCompanionBuilder =
       Value<String?> color,
       Value<String?> photoUrl,
       Value<int> sortOrder,
+      Value<int?> posSlot,
+      Value<bool> isFavorite,
       Value<bool> isAvailableOnline,
       Value<bool> isActive,
       Value<String> createdAt,
@@ -55100,6 +55202,8 @@ typedef $$MenusTableUpdateCompanionBuilder =
       Value<String?> color,
       Value<String?> photoUrl,
       Value<int> sortOrder,
+      Value<int?> posSlot,
+      Value<bool> isFavorite,
       Value<bool> isAvailableOnline,
       Value<bool> isActive,
       Value<String> createdAt,
@@ -55177,6 +55281,16 @@ class $$MenusTableFilterComposer extends Composer<_$AppDatabase, $MenusTable> {
 
   ColumnFilters<int> get sortOrder => $composableBuilder(
     column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get posSlot => $composableBuilder(
+    column: $table.posSlot,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -55275,6 +55389,16 @@ class $$MenusTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get posSlot => $composableBuilder(
+    column: $table.posSlot,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<bool> get isAvailableOnline => $composableBuilder(
     column: $table.isAvailableOnline,
     builder: (column) => ColumnOrderings(column),
@@ -55352,6 +55476,14 @@ class $$MenusTableAnnotationComposer
   GeneratedColumn<int> get sortOrder =>
       $composableBuilder(column: $table.sortOrder, builder: (column) => column);
 
+  GeneratedColumn<int> get posSlot =>
+      $composableBuilder(column: $table.posSlot, builder: (column) => column);
+
+  GeneratedColumn<bool> get isFavorite => $composableBuilder(
+    column: $table.isFavorite,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<bool> get isAvailableOnline => $composableBuilder(
     column: $table.isAvailableOnline,
     builder: (column) => column,
@@ -55408,6 +55540,8 @@ class $$MenusTableTableManager
                 Value<String?> color = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<int?> posSlot = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isAvailableOnline = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -55427,6 +55561,8 @@ class $$MenusTableTableManager
                 color: color,
                 photoUrl: photoUrl,
                 sortOrder: sortOrder,
+                posSlot: posSlot,
+                isFavorite: isFavorite,
                 isAvailableOnline: isAvailableOnline,
                 isActive: isActive,
                 createdAt: createdAt,
@@ -55448,6 +55584,8 @@ class $$MenusTableTableManager
                 Value<String?> color = const Value.absent(),
                 Value<String?> photoUrl = const Value.absent(),
                 Value<int> sortOrder = const Value.absent(),
+                Value<int?> posSlot = const Value.absent(),
+                Value<bool> isFavorite = const Value.absent(),
                 Value<bool> isAvailableOnline = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
                 Value<String> createdAt = const Value.absent(),
@@ -55467,6 +55605,8 @@ class $$MenusTableTableManager
                 color: color,
                 photoUrl: photoUrl,
                 sortOrder: sortOrder,
+                posSlot: posSlot,
+                isFavorite: isFavorite,
                 isAvailableOnline: isAvailableOnline,
                 isActive: isActive,
                 createdAt: createdAt,

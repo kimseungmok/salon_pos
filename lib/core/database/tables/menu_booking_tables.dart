@@ -29,6 +29,8 @@ class Menus extends Table {
   TextColumn get color => text().nullable()();
   TextColumn get photoUrl => text().nullable()();
   IntColumn get sortOrder => integer().withDefault(const Constant(0))();
+  IntColumn get posSlot => integer().nullable()(); // POSグリッド位置: row*5+col、null=自動配置
+  BoolColumn get isFavorite => boolean().withDefault(const Constant(false))();
   BoolColumn get isAvailableOnline => boolean().withDefault(const Constant(true))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   TextColumn get createdAt => text().withDefault(const CustomExpression("(datetime('now','localtime'))"))();

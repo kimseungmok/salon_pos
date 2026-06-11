@@ -41,7 +41,7 @@ final menuCategoriesProvider = StreamProvider<List<MenuCategory>>((ref) {
       .watch();
 });
 
-// ─── 선택된 카테고리의 메뉴 목록 ──────────────────────────────────────────
+// ─── 선택된 카테고리의 메뉴 목록 (활성만 — 通常表示用) ────────────────────
 final menusByCategoryProvider =
     StreamProvider.family<List<MenusData>, String>((ref, categoryId) {
   final db = ref.watch(databaseProvider);
@@ -52,7 +52,27 @@ final menusByCategoryProvider =
       .watch();
 });
 
-// ─── 활성 스태프 ──────────────────────────────────────────────────────────
+// ─── 선택된 카테고리의 메뉴 목록 (전체 — 編集モード用) ────────────────────
+final menusByCategoryAllProvider =
+    StreamProvider.family<List<MenusData>, String>((ref, categoryId) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.menus)
+        ..where((t) => t.categoryId.equals(categoryId))
+        ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+      .watch();
+});
+
+// ─── お気に入りメニュー (isFavorite = true) ───────────────────────────────
+final favoritesMenusProvider = StreamProvider<List<MenusData>>((ref) {
+  final db = ref.watch(databaseProvider);
+  return (db.select(db.menus)
+        ..where((t) => t.isFavorite.equals(true))
+        ..where((t) => t.isActive.equals(true))
+        ..orderBy([(t) => OrderingTerm.asc(t.sortOrder)]))
+      .watch();
+});
+
+// ─── 活性スタッフ ──────────────────────────────────────────────────────────
 final activeStaffProvider = StreamProvider<List<StaffData>>((ref) {
   final db = ref.watch(databaseProvider);
   return (db.select(db.staff)
