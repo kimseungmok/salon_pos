@@ -30,10 +30,7 @@ class ConsentFormScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('施術同意書テンプレート'),
         actions: [
           IconButton(

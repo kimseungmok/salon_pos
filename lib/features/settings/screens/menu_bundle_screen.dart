@@ -57,10 +57,7 @@ class MenuBundleScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('セットメニュー管理'),
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,

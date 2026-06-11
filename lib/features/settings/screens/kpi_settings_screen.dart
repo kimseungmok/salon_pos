@@ -52,10 +52,7 @@ class _KpiSettingsScreenState extends ConsumerState<KpiSettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('KPI目標設定'),
         actions: [
           TextButton.icon(

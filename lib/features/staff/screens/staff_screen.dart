@@ -52,10 +52,7 @@ class StaffScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('スタッフ管理'),
         actions: [
           Padding(

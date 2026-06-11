@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/top_banner.dart';
+import '../../../shared/providers/back_guard_provider.dart';
 import '../../../shared/providers/database_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 
@@ -27,10 +28,7 @@ class SalonInfoScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),title: const Text('サロン基本情報')),
+        automaticallyImplyLeading: false,title: const Text('サロン基本情報')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),
@@ -59,6 +57,14 @@ class _SalonInfoFormState extends ConsumerState<_SalonInfoForm> {
   late final TextEditingController _invoiceCtrl;
   late final TextEditingController _receiptFooterCtrl;
   bool _saving = false;
+  bool _dirty = false;
+
+  void _markDirty() {
+    if (!_dirty) {
+      setState(() => _dirty = true);
+      ref.read(hasUnsavedChangesProvider.notifier).state = true;
+    }
+  }
 
   @override
   void initState() {
@@ -71,6 +77,9 @@ class _SalonInfoFormState extends ConsumerState<_SalonInfoForm> {
     _emailCtrl = TextEditingController(text: s.email ?? '');
     _invoiceCtrl = TextEditingController(text: s.invoiceRegistrationNo ?? '');
     _receiptFooterCtrl = TextEditingController(text: s.receiptFooter ?? '');
+    for (final ctrl in [_nameCtrl, _nameJpCtrl, _phoneCtrl, _addressCtrl, _emailCtrl, _invoiceCtrl, _receiptFooterCtrl]) {
+      ctrl.addListener(_markDirty);
+    }
   }
 
   @override
@@ -115,6 +124,8 @@ class _SalonInfoFormState extends ConsumerState<_SalonInfoForm> {
         ),
       );
       if (mounted) {
+        setState(() => _dirty = false);
+        ref.read(hasUnsavedChangesProvider.notifier).state = false;
         showTopBanner(context, '保存しました',
             color: AppColors.success, icon: Icons.check_circle_outline);
       }

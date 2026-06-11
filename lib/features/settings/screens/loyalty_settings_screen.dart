@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/top_banner.dart';
+import '../../../shared/providers/back_guard_provider.dart';
 import '../../../shared/providers/database_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 
@@ -31,6 +32,11 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
   bool _saving = false;
   bool _initialized = false;
 
+  void _markDirty() {
+    setState(() => _dirty = true);
+    ref.read(hasUnsavedChangesProvider.notifier).state = true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final settingsAsync = ref.watch(salonSettingsProvider);
@@ -38,10 +44,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('ポイント・会員設定'),
         actions: [
           if (_dirty)
@@ -94,7 +97,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
                         activeColor: AppColors.primary,
                         onChanged: (v) => setState(() {
                           _pointEnabled = v;
-                          _dirty = true;
+                          _markDirty();
                         }),
                       ),
                     ],
@@ -123,7 +126,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
                             value: _pointRatePercent,
                             onChanged: (v) => setState(() {
                               _pointRatePercent = v;
-                              _dirty = true;
+                              _markDirty();
                             }),
                           ),
                           const SizedBox(width: 6),
@@ -173,7 +176,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
                             contentPadding: EdgeInsets.zero,
                             onChanged: (v) => setState(() {
                               _pointExpireDays = v!;
-                              _dirty = true;
+                              _markDirty();
                             }),
                           );
                         }),
@@ -202,6 +205,7 @@ class _LoyaltySettingsScreenState extends ConsumerState<LoyaltySettingsScreen> {
       );
       if (mounted) {
         setState(() => _dirty = false);
+        ref.read(hasUnsavedChangesProvider.notifier).state = false;
         showTopBanner(context, '設定を保存しました',
             color: AppColors.success, icon: Icons.check_circle_outline);
       }

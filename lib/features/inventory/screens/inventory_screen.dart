@@ -45,10 +45,7 @@ class _InventoryScreenState extends ConsumerState<InventoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('在庫管理'),
         actions: [
           // 부족재고 알림 아이콘

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/database/app_database.dart';
 import '../../../core/widgets/top_banner.dart';
+import '../../../shared/providers/back_guard_provider.dart';
 import '../../../shared/providers/database_provider.dart';
 import '../../../shared/theme/app_theme.dart';
 import 'loyalty_settings_screen.dart' show salonSettingsProvider;
@@ -30,6 +31,11 @@ class _ReceiptSettingsScreenState
   bool _dirty = false;
   bool _saving = false;
   bool _initialized = false;
+
+  void _markDirty() {
+    setState(() => _dirty = true);
+    ref.read(hasUnsavedChangesProvider.notifier).state = true;
+  }
 
   @override
   void dispose() {
@@ -60,10 +66,7 @@ class _ReceiptSettingsScreenState
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go(AppRoutes.settings),
-        ),
+        automaticallyImplyLeading: false,
         title: const Text('レシート設定'),
         actions: [
           if (_dirty)
@@ -102,28 +105,28 @@ class _ReceiptSettingsScreenState
                         ctrl: _nameCtrl,
                         label: '店舗名 *',
                         hint: 'Salon Example',
-                        onChanged: (_) => setState(() => _dirty = true),
+                        onChanged: (_) => _markDirty(),
                       ),
                       const SizedBox(height: 12),
                       _Field(
                         ctrl: _nameJpCtrl,
                         label: '店舗名（日本語）',
                         hint: 'サロン例',
-                        onChanged: (_) => setState(() => _dirty = true),
+                        onChanged: (_) => _markDirty(),
                       ),
                       const SizedBox(height: 12),
                       _Field(
                         ctrl: _phoneCtrl,
                         label: '電話番号',
                         hint: '03-0000-0000',
-                        onChanged: (_) => setState(() => _dirty = true),
+                        onChanged: (_) => _markDirty(),
                       ),
                       const SizedBox(height: 12),
                       _Field(
                         ctrl: _addressCtrl,
                         label: '住所',
                         hint: '東京都渋谷区...',
-                        onChanged: (_) => setState(() => _dirty = true),
+                        onChanged: (_) => _markDirty(),
                       ),
                     ],
                   ),
@@ -142,7 +145,7 @@ class _ReceiptSettingsScreenState
                     ctrl: _invoiceNoCtrl,
                     label: '登録番号',
                     hint: 'T0000000000000',
-                    onChanged: (_) => setState(() => _dirty = true),
+                    onChanged: (_) => _markDirty(),
                   ),
                 ),
               ),
@@ -160,7 +163,7 @@ class _ReceiptSettingsScreenState
                     label: 'フッター',
                     hint: 'またのご来店をお待ちしております',
                     maxLines: 3,
-                    onChanged: (_) => setState(() => _dirty = true),
+                    onChanged: (_) => _markDirty(),
                   ),
                 ),
               ),
@@ -253,6 +256,7 @@ class _ReceiptSettingsScreenState
       );
       if (mounted) {
         setState(() => _dirty = false);
+        ref.read(hasUnsavedChangesProvider.notifier).state = false;
         showTopBanner(context, '設定を保存しました',
             color: AppColors.success, icon: Icons.check_circle_outline);
       }

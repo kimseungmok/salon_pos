@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/app_theme.dart';
+import '../providers/back_guard_provider.dart';
 import '../../features/notifications/providers/notification_provider.dart';
 import '../../features/reports/providers/reports_provider.dart';
 
@@ -136,7 +137,32 @@ class _MainShellState extends ConsumerState<MainShell> {
             notifCount: notifCount,
             onHamburger: () => _scaffoldKey.currentState?.openDrawer(),
             onBack: canPop
-                ? () {
+                ? () async {
+                    final hasUnsaved = ref.read(hasUnsavedChangesProvider);
+                    if (hasUnsaved) {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('未保存の変更があります'),
+                          content: const Text('変更が保存されていません。保存せずに戻りますか？'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('キャンセル'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              style: TextButton.styleFrom(
+                                  foregroundColor: AppColors.error),
+                              child: const Text('保存せず戻る'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirmed != true) return;
+                      ref.read(hasUnsavedChangesProvider.notifier).state = false;
+                    }
+                    if (!context.mounted) return;
                     final parent =
                         '/${segments.sublist(0, segments.length - 1).join('/')}';
                     context.go(parent);
