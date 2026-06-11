@@ -150,7 +150,7 @@ void showTopBanner(
   _currentBannerEntry?.remove();
   _currentBannerEntry = null;
 
-  final overlay = Overlay.of(context);
+  final overlay = Navigator.of(context, rootNavigator: true).overlay ?? Overlay.of(context);
   late OverlayEntry entry;
 
   entry = OverlayEntry(
