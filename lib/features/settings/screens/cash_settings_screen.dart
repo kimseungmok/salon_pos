@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -13,7 +15,10 @@ class CashSettingsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.settings),
+        ),
         title: const Text('キャッシュドロア'),
       ),
       body: ListView(

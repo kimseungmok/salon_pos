@@ -24,6 +24,7 @@ import '../../features/settings/screens/loyalty_tiers_screen.dart';
 import '../../features/settings/screens/consent_form_screen.dart';
 import '../../features/settings/screens/prepaid_plan_screen.dart';
 import '../../features/settings/screens/credit_management_screen.dart';
+import '../../features/settings/screens/system_settings_screen.dart';
 import '../../shared/widgets/main_shell.dart';
 
 // ─── 라우트 경로 ──────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ class AppRoutes {
   static const settingsConsent      = '/settings/consent';
   static const settingsPrepaid      = '/settings/prepaid';
   static const settingsCreditMgmt   = '/settings/credit';
+  static const settingsSystem        = '/settings/system';
   static const openRegister      = '/open-register';
   static const transactions      = '/reports/transactions';
 }
@@ -182,6 +184,11 @@ final appRouter = GoRouter(
               path: 'credit',
               pageBuilder: (c, s) =>
                   const NoTransitionPage(child: CreditManagementScreen()),
+            ),
+            GoRoute(
+              path: 'system',
+              pageBuilder: (c, s) =>
+                  const NoTransitionPage(child: SystemSettingsScreen()),
             ),
           ],
         ),

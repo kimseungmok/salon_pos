@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +27,10 @@ class SalonInfoScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,title: const Text('サロン基本情報')),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.settings),
+        ),title: const Text('サロン基本情報')),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('$e')),

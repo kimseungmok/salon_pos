@@ -88,11 +88,15 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   @override
   Widget build(BuildContext context) {
+    final notifCount = ref.watch(notifCountProvider);
+    final topPad = MediaQuery.of(context).padding.top;
+    return _buildShell(context, notifCount, topPad);
+  }
+
+  Widget _buildShell(BuildContext context, int notifCount, double topPad) {
     final location = GoRouterState.of(context).uri.path;
     final idx = _currentIndex(location);
-    final notifCount = ref.watch(notifCountProvider);
     final tab = _tabs[idx];
-    final topPad = MediaQuery.of(context).padding.top;
 
     // context.canPop()은 ShellRoute 컨텍스트에서 올바르게 동작하지 않으므로
     // 경로 세그먼트 수로 판단 (예: /settings/campaign → 2개 = 뒤로가기 가능)
@@ -103,7 +107,6 @@ class _MainShellState extends ConsumerState<MainShell> {
       key: _scaffoldKey,
       backgroundColor: AppColors.background,
       drawerScrimColor: Colors.black.withAlpha(100),
-      enableOpenDragGesture: false,
       drawer: Drawer(
         width: _sidebarWidth,
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),

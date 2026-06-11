@@ -1,3 +1,5 @@
+import 'package:go_router/go_router.dart';
+import '../../../../core/router/app_router.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -59,7 +61,10 @@ class CreditManagementScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        automaticallyImplyLeading: false,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go(AppRoutes.settings),
+        ),
         title: const Text('掛け売り管理'),
         backgroundColor: AppColors.surface,
         elevation: 0,
