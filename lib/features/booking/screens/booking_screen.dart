@@ -100,11 +100,14 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
 
   void _onDateChanged(DateTime d) {
     ref.read(selectedDateProvider.notifier).state = d;
-    setState(() => _sidebarDate = d);
-    if (_viewMode == _ViewMode.day) {
-      final diff = d.difference(_baseDate).inDays;
-      _pageController.jumpToPage(_basePage + diff);
-    }
+    Future.microtask(() {
+      if (!mounted) return;
+      setState(() => _sidebarDate = d);
+      if (_viewMode == _ViewMode.day) {
+        final diff = d.difference(_baseDate).inDays;
+        _pageController.jumpToPage(_basePage + diff);
+      }
+    });
   }
 
   @override
@@ -160,9 +163,12 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                   onFilterChanged: (s) => setState(() => _filterStatus = s),
                   onStaffFilterChanged: (s) => setState(() => _filterStaffId = s),
                   onViewModeChanged: (m) {
-                    setState(() {
-                      _viewMode = m;
-                      _sidebarDate = selectedDate;
+                    Future.microtask(() {
+                      if (!mounted) return;
+                      setState(() {
+                        _viewMode = m;
+                        _sidebarDate = selectedDate;
+                      });
                     });
                   },
                 ),
@@ -195,15 +201,21 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                         onDateChanged: _onDateChanged,
                         onSwitchToDay: (d) {
                           _onDateChanged(d);
-                          setState(() {
-                            _viewMode = _ViewMode.day;
-                            _weekFocusedDate = null;
+                          Future.microtask(() {
+                            if (!mounted) return;
+                            setState(() {
+                              _viewMode = _ViewMode.day;
+                              _weekFocusedDate = null;
+                            });
                           });
                         },
                         onFocusedDateChanged: (d) {
-                          setState(() {
-                            _weekFocusedDate = d;
-                            if (d != null) _sidebarDate = d;
+                          Future.microtask(() {
+                            if (!mounted) return;
+                            setState(() {
+                              _weekFocusedDate = d;
+                              if (d != null) _sidebarDate = d;
+                            });
                           });
                         },
                       ),
@@ -569,7 +581,7 @@ class _ViewModeDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<_ViewMode>(
       tooltip: '',
-      onSelected: onChanged,
+      onSelected: (m) => Future.microtask(() => onChanged(m)),
       offset: const Offset(0, 38),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
