@@ -806,12 +806,6 @@ class _DayCalendarState extends ConsumerState<_DayCalendar> {
   void _updateDrag(Offset globalPos) {
     _dragPos = globalPos;
     _overlayEntry?.markNeedsBuild();
-    // rebuild overlay with new position
-    _overlayEntry?.remove();
-    _overlayEntry = OverlayEntry(
-      builder: (_) => _DragOverlay(apt: _dragApt!, position: _dragPos),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
     _calculateDrop(globalPos);
     setState(() {});
   }
@@ -2842,11 +2836,7 @@ class _WeekScrollViewState extends ConsumerState<_WeekScrollView> {
 
   void _updateDrag(Offset globalPos) {
     _dragPos = globalPos;
-    _overlayEntry?.remove();
-    _overlayEntry = OverlayEntry(
-      builder: (_) => _DragOverlay(apt: _dragApt!, position: _dragPos),
-    );
-    Overlay.of(context).insert(_overlayEntry!);
+    _overlayEntry?.markNeedsBuild();
     _calculateDrop(globalPos);
     _checkEdgeScroll(globalPos);
   }
